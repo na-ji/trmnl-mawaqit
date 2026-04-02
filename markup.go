@@ -9,19 +9,21 @@ import (
 	"time"
 )
 
+type Prayer struct {
+	Name   string
+	Time   string
+	IsNext bool
+}
+
 type PrayerDisplay struct {
 	MosqueName string
-	Fajr       string
-	Shuruq     string
-	Dhuhr      string
-	Asr        string
-	Maghrib    string
-	Isha       string
-	NextPrayer string // time string of the next upcoming prayer
+	Prayers    []Prayer
 	Jumua      string
 	Jumua2     string
 	Jumua3     string
 }
+
+var names = []string{"Fajr", "Shuruq", "Dohr", "Asr", "Maghrib", "Isha"}
 
 func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay, error) {
 	loc, err := time.LoadLocation(timezone)
@@ -38,14 +40,32 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 		return nil, err
 	}
 
+	// Determine next prayer
+	nowMinutes := now.Hour()*60 + now.Minute()
+	nextIdx := 0 // default to Fajr (wrap around)
+	for i, t := range times {
+		m, err := timeToMinutes(t)
+		if err != nil {
+			continue
+		}
+		if m > nowMinutes {
+			nextIdx = i
+			break
+		}
+	}
+
+	prayers := make([]Prayer, len(names))
+	for i, name := range names {
+		prayers[i] = Prayer{
+			Name:   name,
+			Time:   times[i],
+			IsNext: i == nextIdx,
+		}
+	}
+
 	pd := &PrayerDisplay{
 		MosqueName: data.RawData.Name,
-		Fajr:       times[0],
-		Shuruq:     times[1],
-		Dhuhr:      times[2],
-		Asr:        times[3],
-		Maghrib:    times[4],
-		Isha:       times[5],
+		Prayers:    prayers,
 		Jumua:      data.RawData.Jumua,
 	}
 	if data.RawData.Jumua2 != nil {
@@ -53,25 +73,6 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 	}
 	if data.RawData.Jumua3 != nil {
 		pd.Jumua3 = *data.RawData.Jumua3
-	}
-
-	// Determine next prayer
-	nowMinutes := now.Hour()*60 + now.Minute()
-	prayerTimes := []string{pd.Fajr, pd.Shuruq, pd.Dhuhr, pd.Asr, pd.Maghrib, pd.Isha}
-
-	for _, t := range prayerTimes {
-		m, err := timeToMinutes(t)
-		if err != nil {
-			continue
-		}
-		if m > nowMinutes {
-			pd.NextPrayer = t
-			break
-		}
-	}
-	// If no next prayer found (past Isha), wrap to Fajr
-	if pd.NextPrayer == "" {
-		pd.NextPrayer = pd.Fajr
 	}
 
 	return pd, nil

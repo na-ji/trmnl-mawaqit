@@ -1,129 +1,23 @@
 {{ define "full.html" }}
-<style>
-    body {
-        margin: 0;
-        padding: 0;
-        background: white;
-        color: black;
-        font-family: sans-serif;
-        width: 800px;
-        height: 480px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: center;
-        box-sizing: border-box;
-    }
+<div class="layout layout--col gap">
 
-    .label {
-        font-size: 46px !important;
-        line-height: 1.2;
-        padding: 20px 0 25px 0;
-        text-align: center;
-        width: 100%;
-        box-sizing: border-box;
-        min-height: 75px;
-        overflow-wrap: break-word;
-        font-weight: 600;
-    }
-
-    .ligne {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        width: 100%;
-        font-size: 68px;
-        padding: 11px 0;
-    }
-
-    .bloc {
-        flex: 1;
-        text-align: center;
-        position: relative;
-    }
-
-    .ligne .bloc:not(:last-child)::after {
-        content: "";
-        position: absolute;
-        top: 15%;
-        right: 0;
-        width: 1px;
-        height: 70%;
-        background-color: #ccc;
-    }
-
-    .etiquette {
-        display: block;
-        font-size: 36px;
-        margin-bottom: 10px;
-    }
-
-    .heure {
-        font-size: 82px;
-    }
-
-    .title_bar {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        padding: 10px 15px;
-        box-sizing: border-box;
-        background: #f9f9f9;
-    }
-
-    .title_bar img.image {
-        height: 40px;
-        width: auto;
-        margin-right: 15px;
-    }
-
-    .title_bar .title {
-        font-weight: 700;
-        font-size: 24px;
-        flex-grow: 1;
-    }
-
-    .title_bar .instance {
-        font-size: 18px;
-        color: #666;
-    }
-</style>
-
-<div class="label">{{ .MosqueName }}</div>
-
-<div class="ligne">
-    <div class="bloc">
-        <span class="etiquette">Fajr</span>
-        <span class="heure">{{ if eq .NextPrayer .Fajr }}<strong>{{ .Fajr }}</strong>{{ else }}{{ .Fajr }}{{ end }}</span>
+  <div class="grid grid--cols-2 lg:grid--cols-2 gap">
+    {{ range .Prayers }}
+    <div class="item{{ if .IsNext }} bg--black rounded{{ end }} p--2">
+      <div class="meta"></div>
+      <div class="content">
+        <span class="value value--xlarge lg:value--xxxlarge value--tnums{{ if .IsNext }} label--inverted{{ end }}">{{ .Time }}</span>
+        <span class="label label--medium lg:label--large{{ if .IsNext }} label--inverted{{ end }}">{{ .Name }}</span>
+      </div>
     </div>
-    <div class="bloc">
-        <span class="etiquette">Shuruq</span>
-        <span class="heure">{{ if eq .NextPrayer .Shuruq }}<strong>{{ .Shuruq }}</strong>{{ else }}{{ .Shuruq }}{{ end }}</span>
-    </div>
-    <div class="bloc">
-        <span class="etiquette">Dohr</span>
-        <span class="heure">{{ if eq .NextPrayer .Dhuhr }}<strong>{{ .Dhuhr }}</strong>{{ else }}{{ .Dhuhr }}{{ end }}</span>
-    </div>
-</div>
+    {{ end }}
+  </div>
 
-<div class="ligne">
-    <div class="bloc">
-        <span class="etiquette">Asr</span>
-        <span class="heure">{{ if eq .NextPrayer .Asr }}<strong>{{ .Asr }}</strong>{{ else }}{{ .Asr }}{{ end }}</span>
-    </div>
-    <div class="bloc">
-        <span class="etiquette">Maghrib</span>
-        <span class="heure">{{ if eq .NextPrayer .Maghrib }}<strong>{{ .Maghrib }}</strong>{{ else }}{{ .Maghrib }}{{ end }}</span>
-    </div>
-    <div class="bloc">
-        <span class="etiquette">Isha</span>
-        <span class="heure">{{ if eq .NextPrayer .Isha }}<strong>{{ .Isha }}</strong>{{ else }}{{ .Isha }}{{ end }}</span>
-    </div>
 </div>
 
 <div class="title_bar">
-    <img class="image" src="https://usetrmnl.com/images/plugins/trmnl--render.svg" alt="Logo" />
-    <span class="title">Jumua : {{ .Jumua }}{{ if .Jumua2 }} - {{ .Jumua2 }}{{ end }}{{ if .Jumua3 }} - {{ .Jumua3 }}{{ end }}</span>
-    <span class="instance"></span>
+  <img class="image" src="https://usetrmnl.com/images/plugins/trmnl--render.svg">
+  <span class="title">{{ .MosqueName }}</span>
+  <span class="instance">Jumua : {{ .Jumua }}{{ if .Jumua2 }} · {{ .Jumua2 }}{{ end }}{{ if .Jumua3 }} · {{ .Jumua3 }}{{ end }}</span>
 </div>
 {{ end }}
