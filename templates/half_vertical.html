@@ -1,0 +1,106 @@
+{{ define "half_vertical.html" }}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        color: black;
+        font-family: sans-serif;
+        width: 400px;
+        height: 480px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .label {
+        font-size: 24px;
+        line-height: 1.2;
+        padding: 10px 0;
+        text-align: center;
+        width: 100%;
+        font-weight: 600;
+    }
+
+    .prayers {
+        flex: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 20px;
+        box-sizing: border-box;
+    }
+
+    .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .row:last-child {
+        border-bottom: none;
+    }
+
+    .prayer-name {
+        font-size: 22px;
+    }
+
+    .prayer-time {
+        font-size: 28px;
+        font-weight: 600;
+    }
+
+    .title_bar {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 6px 10px;
+        box-sizing: border-box;
+        background: #f9f9f9;
+        font-size: 14px;
+    }
+
+    .title_bar .title {
+        font-weight: 700;
+        flex-grow: 1;
+    }
+</style>
+
+<div class="label">{{ .MosqueName }}</div>
+
+<div class="prayers">
+    <div class="row">
+        <span class="prayer-name">Fajr</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Fajr }}<strong>{{ .Fajr }}</strong>{{ else }}{{ .Fajr }}{{ end }}</span>
+    </div>
+    <div class="row">
+        <span class="prayer-name">Shuruq</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Shuruq }}<strong>{{ .Shuruq }}</strong>{{ else }}{{ .Shuruq }}{{ end }}</span>
+    </div>
+    <div class="row">
+        <span class="prayer-name">Dohr</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Dhuhr }}<strong>{{ .Dhuhr }}</strong>{{ else }}{{ .Dhuhr }}{{ end }}</span>
+    </div>
+    <div class="row">
+        <span class="prayer-name">Asr</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Asr }}<strong>{{ .Asr }}</strong>{{ else }}{{ .Asr }}{{ end }}</span>
+    </div>
+    <div class="row">
+        <span class="prayer-name">Maghrib</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Maghrib }}<strong>{{ .Maghrib }}</strong>{{ else }}{{ .Maghrib }}{{ end }}</span>
+    </div>
+    <div class="row">
+        <span class="prayer-name">Isha</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Isha }}<strong>{{ .Isha }}</strong>{{ else }}{{ .Isha }}{{ end }}</span>
+    </div>
+</div>
+
+<div class="title_bar">
+    <span class="title">Jumua : {{ .Jumua }}{{ if .Jumua2 }} - {{ .Jumua2 }}{{ end }}{{ if .Jumua3 }} - {{ .Jumua3 }}{{ end }}</span>
+</div>
+{{ end }}

@@ -1,0 +1,94 @@
+{{ define "quadrant.html" }}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        color: black;
+        font-family: sans-serif;
+        width: 400px;
+        height: 240px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .label {
+        font-size: 18px;
+        line-height: 1.2;
+        padding: 6px 0;
+        text-align: center;
+        width: 100%;
+        font-weight: 600;
+    }
+
+    .grid {
+        flex: 1;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 2px;
+        padding: 0 8px;
+        box-sizing: border-box;
+        align-items: center;
+    }
+
+    .cell {
+        text-align: center;
+        padding: 4px 0;
+    }
+
+    .prayer-name {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
+
+    .prayer-time {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    .title_bar {
+        width: 100%;
+        padding: 4px 8px;
+        box-sizing: border-box;
+        background: #f9f9f9;
+        font-size: 12px;
+        font-weight: 700;
+    }
+</style>
+
+<div class="label">{{ .MosqueName }}</div>
+
+<div class="grid">
+    <div class="cell">
+        <span class="prayer-name">Fajr</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Fajr }}<strong>{{ .Fajr }}</strong>{{ else }}{{ .Fajr }}{{ end }}</span>
+    </div>
+    <div class="cell">
+        <span class="prayer-name">Shuruq</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Shuruq }}<strong>{{ .Shuruq }}</strong>{{ else }}{{ .Shuruq }}{{ end }}</span>
+    </div>
+    <div class="cell">
+        <span class="prayer-name">Dohr</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Dhuhr }}<strong>{{ .Dhuhr }}</strong>{{ else }}{{ .Dhuhr }}{{ end }}</span>
+    </div>
+    <div class="cell">
+        <span class="prayer-name">Asr</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Asr }}<strong>{{ .Asr }}</strong>{{ else }}{{ .Asr }}{{ end }}</span>
+    </div>
+    <div class="cell">
+        <span class="prayer-name">Maghrib</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Maghrib }}<strong>{{ .Maghrib }}</strong>{{ else }}{{ .Maghrib }}{{ end }}</span>
+    </div>
+    <div class="cell">
+        <span class="prayer-name">Isha</span>
+        <span class="prayer-time">{{ if eq .NextPrayer .Isha }}<strong>{{ .Isha }}</strong>{{ else }}{{ .Isha }}{{ end }}</span>
+    </div>
+</div>
+
+<div class="title_bar">Jumua : {{ .Jumua }}{{ if .Jumua2 }} - {{ .Jumua2 }}{{ end }}{{ if .Jumua3 }} - {{ .Jumua3 }}{{ end }}</div>
+{{ end }}

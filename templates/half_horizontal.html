@@ -1,0 +1,109 @@
+{{ define "half_horizontal.html" }}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        color: black;
+        font-family: sans-serif;
+        width: 800px;
+        height: 240px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .label {
+        font-size: 28px;
+        line-height: 1.2;
+        padding: 8px 0;
+        text-align: center;
+        width: 100%;
+        font-weight: 600;
+    }
+
+    .ligne {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        width: 100%;
+        padding: 4px 0;
+    }
+
+    .bloc {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+
+    .ligne .bloc:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 15%;
+        right: 0;
+        width: 1px;
+        height: 70%;
+        background-color: #ccc;
+    }
+
+    .etiquette {
+        display: block;
+        font-size: 18px;
+        margin-bottom: 4px;
+    }
+
+    .heure {
+        font-size: 36px;
+    }
+
+    .title_bar {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 4px 10px;
+        box-sizing: border-box;
+        background: #f9f9f9;
+        font-size: 16px;
+    }
+
+    .title_bar .title {
+        font-weight: 700;
+        flex-grow: 1;
+    }
+</style>
+
+<div class="label">{{ .MosqueName }}</div>
+
+<div class="ligne">
+    <div class="bloc">
+        <span class="etiquette">Fajr</span>
+        <span class="heure">{{ if eq .NextPrayer .Fajr }}<strong>{{ .Fajr }}</strong>{{ else }}{{ .Fajr }}{{ end }}</span>
+    </div>
+    <div class="bloc">
+        <span class="etiquette">Shuruq</span>
+        <span class="heure">{{ if eq .NextPrayer .Shuruq }}<strong>{{ .Shuruq }}</strong>{{ else }}{{ .Shuruq }}{{ end }}</span>
+    </div>
+    <div class="bloc">
+        <span class="etiquette">Dohr</span>
+        <span class="heure">{{ if eq .NextPrayer .Dhuhr }}<strong>{{ .Dhuhr }}</strong>{{ else }}{{ .Dhuhr }}{{ end }}</span>
+    </div>
+    <div class="bloc">
+        <span class="etiquette">Asr</span>
+        <span class="heure">{{ if eq .NextPrayer .Asr }}<strong>{{ .Asr }}</strong>{{ else }}{{ .Asr }}{{ end }}</span>
+    </div>
+    <div class="bloc">
+        <span class="etiquette">Maghrib</span>
+        <span class="heure">{{ if eq .NextPrayer .Maghrib }}<strong>{{ .Maghrib }}</strong>{{ else }}{{ .Maghrib }}{{ end }}</span>
+    </div>
+    <div class="bloc">
+        <span class="etiquette">Isha</span>
+        <span class="heure">{{ if eq .NextPrayer .Isha }}<strong>{{ .Isha }}</strong>{{ else }}{{ .Isha }}{{ end }}</span>
+    </div>
+</div>
+
+<div class="title_bar">
+    <span class="title">Jumua : {{ .Jumua }}{{ if .Jumua2 }} - {{ .Jumua2 }}{{ end }}{{ if .Jumua3 }} - {{ .Jumua3 }}{{ end }}</span>
+</div>
+{{ end }}

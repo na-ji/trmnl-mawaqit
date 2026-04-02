@@ -1,0 +1,4 @@
+.env
+data
+*.http
+.claude/settings.local.json
