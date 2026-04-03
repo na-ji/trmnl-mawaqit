@@ -99,6 +99,7 @@ func (h *Handlers) InstallCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	registeredUsers.Inc()
 	log.Info().Str("uuid", user.UUID).Str("timezone", user.Timezone).Msg("user installed")
 	w.WriteHeader(http.StatusOK)
 }
@@ -241,8 +242,11 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	markupRequestsTotal.Inc()
+
 	// Check markup cache first (per-user, expires at next prayer time)
 	if cached := h.markupCache.Get(userUUID); cached != nil {
+		markupCacheHitsTotal.Inc()
 		writeJSON(w, cached)
 		return
 	}
@@ -307,6 +311,7 @@ func (h *Handlers) Uninstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	registeredUsers.Dec()
 	h.markupCache.Delete(payload.UserUUID)
 	log.Info().Str("uuid", payload.UserUUID).Msg("user uninstalled")
 	w.WriteHeader(http.StatusOK)

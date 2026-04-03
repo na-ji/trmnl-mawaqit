@@ -107,20 +107,24 @@ func (c *MawaqitClient) GetMosqueData(slug string, timezone string) (*MawaqitRes
 	c.mu.RLock()
 	if entry, ok := c.cache[slug]; ok && now.Before(entry.expiresAt) {
 		c.mu.RUnlock()
+		mawaqitAPICacheHitsTotal.Inc()
 		log.Debug().Str("slug", slug).Msg("mawaqit cache hit")
 		return entry.data, nil
 	}
 	c.mu.RUnlock()
 
+	mawaqitAPICallsTotal.Inc()
 	log.Info().Str("slug", slug).Msg("fetching mawaqit data")
 	url := fmt.Sprintf("%s/%s/", c.baseURL, slug)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
+		mawaqitAPIErrorsTotal.Inc()
 		return nil, fmt.Errorf("fetch mosque data: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		mawaqitAPIErrorsTotal.Inc()
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("mawaqit API returned %d: %s", resp.StatusCode, string(body))
 	}

@@ -80,6 +80,12 @@ func (s *Store) DeleteUser(uuid string) error {
 	return err
 }
 
+func (s *Store) CountUsers() (int64, error) {
+	var count int64
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&count)
+	return count, err
+}
+
 func (s *Store) Close() error {
 	return s.db.Close()
 }

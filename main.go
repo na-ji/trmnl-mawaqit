@@ -5,8 +5,10 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -37,15 +39,18 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)
-		if r.URL.Path == "/health" {
+		if r.URL.Path == "/health" || r.URL.Path == "/metrics" {
 			return
 		}
+		duration := time.Since(start)
 		log.Info().
 			Str("method", r.Method).
 			Str("path", r.URL.Path).
 			Int("status", rw.status).
-			Dur("duration", time.Since(start)).
+			Dur("duration", duration).
 			Msg("request")
+		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(rw.status)).Inc()
+		httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
 	})
 }
 
@@ -100,6 +105,14 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "ok")
 	})
+
+	// Prometheus metrics
+	mux.Handle("GET /metrics", promhttp.Handler())
+
+	// Initialize user gauge from DB
+	if count, err := store.CountUsers(); err == nil {
+		registeredUsers.Set(float64(count))
+	}
 
 	addr := ":" + port
 	log.Info().Str("addr", addr).Msg("starting server")
