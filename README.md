@@ -1,3 +1,5 @@
+[[Lire en Français](README.fr.md)]
+
 # TRMNL Mawaqit Prayer Times Plugin
 
 A [TRMNL](https://usetrmnl.com) plugin that displays Islamic prayer times on your e-ink device, sourced from [Mawaqit](https://mawaqit.net) mosque data.
@@ -10,12 +12,55 @@ The only configuration is your mosque slug (e.g. `tawba-bussy-saint-georges`), a
 - Next prayer automatically highlighted in bold
 - Jumua (Friday prayer) times displayed in the footer
 - 4 TRMNL layout variants: full, half horizontal, half vertical, quadrant
-- Settings page for configuring your mosque
+- Settings page with i18n support (English and French)
 - Two-layer smart caching: prayer times cached until Isha, markup cached until next prayer
 - Structured logging with zerolog (JSON or console output)
-- Markup previewer for local development
 
-## Quick Start
+## Getting Started
+
+1. [Install the plugin on your TRMNL](https://trmnl.com/plugin_settings/new?keyname=mawaqit)
+2. Find your mosque slug on [mawaqit.net](https://mawaqit.net) — it's the last part of the URL: `mawaqit.net/en/<your-mosque-slug>`
+3. Enter the slug in the plugin settings page
+
+## Self-Hosting
+
+If you want to run your own instance of the server instead of using the hosted one:
+
+### Run with Docker Compose
+
+```bash
+cp .env.example .env
+# Edit .env with your TRMNL credentials
+
+docker compose up -d
+```
+
+This pulls the pre-built image from `ghcr.io/na-ji/trmnl-mawaqit:main` and starts the server alongside the Mawaqit API.
+
+### Environment Variables
+
+| Variable              | Required | Default             | Description                                                                  |
+|-----------------------|----------|---------------------|------------------------------------------------------------------------------|
+| `TRMNL_CLIENT_ID`     | Yes      | -                   | OAuth client ID from TRMNL plugin registration                               |
+| `TRMNL_CLIENT_SECRET` | Yes      | -                   | OAuth client secret                                                          |
+| `MAWAQIT_API_BASE`    | Yes      | -                   | Unoficial Mawaqit API base URL (cf https://github.com/mrsofiane/mawaqit-api) |
+| `PORT`                | No       | `8080`              | HTTP listen port                                                             |
+| `DB_PATH`             | No       | `./data/mawaqit.db` | SQLite database file path                                                    |
+| `LOG_FORMAT`          | No       | `console`           | Log output format: `console` for dev, `json` for production                  |
+
+### TRMNL Plugin Registration
+
+When registering your own plugin on the TRMNL developer portal, configure these endpoint URLs (replace `BASE_URL` with your public server URL):
+
+| Setting                   | URL                           |
+|---------------------------|-------------------------------|
+| Installation URL          | `{BASE_URL}/install`          |
+| Installation Callback URL | `{BASE_URL}/install/callback` |
+| Plugin Markup URL         | `{BASE_URL}/markup`           |
+| Plugin Management URL     | `{BASE_URL}/manage`           |
+| Uninstallation URL        | `{BASE_URL}/uninstall`        |
+
+## Development
 
 ### Prerequisites
 
@@ -39,17 +84,6 @@ go run .
 
 The server starts on port 8080 by default. Visit `http://localhost:8080/health` to verify.
 
-### Run with Docker Compose
-
-```bash
-cp .env.example .env
-# Edit .env with your TRMNL credentials
-
-docker compose up -d
-```
-
-This pulls the pre-built image from `ghcr.io/na-ji/trmnl-mawaqit:main` and starts the server alongside the Mawaqit API.
-
 ### Preview Templates
 
 Render all 4 layout variants in your browser without running the server:
@@ -60,31 +94,6 @@ go run . preview --slug=your-mosque-slug --timezone=Europe/Paris
 
 This generates a `preview.html` file using the TRMNL framework CSS and opens it in your default browser.
 
-## Environment Variables
-
-| Variable              | Required | Default             | Description                                                                  |
-|-----------------------|----------|---------------------|------------------------------------------------------------------------------|
-| `TRMNL_CLIENT_ID`     | Yes      | -                   | OAuth client ID from TRMNL plugin registration                               |
-| `TRMNL_CLIENT_SECRET` | Yes      | -                   | OAuth client secret                                                          |
-| `MAWAQIT_API_BASE`    | Yes      | -                   | Unoficial Mawaqit API base URL (cf https://github.com/mrsofiane/mawaqit-api) |
-| `PORT`                | No       | `8080`              | HTTP listen port                                                             |
-| `DB_PATH`             | No       | `./data/mawaqit.db` | SQLite database file path                                                    |
-| `LOG_FORMAT`          | No       | `console`           | Log output format: `console` for dev, `json` for production                  |
-
-## TRMNL Plugin Registration
-
-When registering this plugin on the TRMNL developer portal, configure these endpoint URLs (replace `BASE_URL` with your public server URL):
-
-| Setting                   | URL                           |
-|---------------------------|-------------------------------|
-| Installation URL          | `{BASE_URL}/install`          |
-| Installation Callback URL | `{BASE_URL}/install/callback` |
-| Plugin Markup URL         | `{BASE_URL}/markup`           |
-| Plugin Management URL     | `{BASE_URL}/manage`           |
-| Uninstallation URL        | `{BASE_URL}/uninstall`        |
-
-## Architecture
-
 ### Project Structure
 
 ```
@@ -93,14 +102,16 @@ trmnl-mawaqit/
 ├── handlers.go       # HTTP handlers for all TRMNL endpoints
 ├── mawaqit.go        # Mawaqit API client with Isha-based TTL caching
 ├── markup.go         # Prayer time computation, template rendering, markup cache
+├── i18n.go           # Translations (EN/FR) and language detection
 ├── preview.go        # CLI preview command for local template testing
 ├── store.go          # SQLite user storage (CRUD)
+├── cmd/healthcheck/  # Tiny health check binary for Docker HEALTHCHECK
 ├── templates/
 │   ├── full.html              # Full-screen layout (800x480)
 │   ├── half_horizontal.html   # Half horizontal (800x240)
 │   ├── half_vertical.html     # Half vertical (400x480)
 │   ├── quadrant.html          # Quadrant (400x240)
-│   └── manage.html            # Settings form
+│   └── manage.html            # Settings form (i18n)
 ├── Dockerfile                 # Multi-stage build with distroless runner
 ├── docker-compose.yml
 └── .github/workflows/
@@ -146,9 +157,4 @@ User clicks "Install" on TRMNL
 
 **`handlers.go`** -- HTTP handlers implementing the TRMNL plugin contract. The markup endpoint returns a JSON object with 4 keys (`markup`, `markup_half_horizontal`, `markup_half_vertical`, `markup_quadrant`), each containing rendered HTML for the corresponding TRMNL display size.
 
-### Finding Your Mosque Slug
-
-1. Go to [mawaqit.net](https://mawaqit.net)
-2. Search for your mosque
-3. The slug is the last part of the URL: `mawaqit.net/en/<your-mosque-slug>`
-4. Enter this slug in the plugin settings page
+**`i18n.go`** -- Simple map-based translations for English and French. Language is auto-detected from the browser's `Accept-Language` header, with manual override via query parameter.
