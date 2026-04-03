@@ -37,6 +37,9 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)
+		if r.URL.Path == "/health" {
+			return
+		}
 		log.Info().
 			Str("method", r.Method).
 			Str("path", r.URL.Path).
