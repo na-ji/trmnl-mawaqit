@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Calendar is [12]map[string][]string — list of months, each month is a map
@@ -65,10 +67,12 @@ func (c *MawaqitClient) GetMosqueData(slug string) (*MawaqitResponse, error) {
 	c.mu.RLock()
 	if entry, ok := c.cache[slug]; ok && time.Since(entry.fetchedAt) < time.Hour {
 		c.mu.RUnlock()
+		log.Debug().Str("slug", slug).Msg("mawaqit cache hit")
 		return entry.data, nil
 	}
 	c.mu.RUnlock()
 
+	log.Info().Str("slug", slug).Msg("fetching mawaqit data")
 	url := fmt.Sprintf("%s/%s/", c.baseURL, slug)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {

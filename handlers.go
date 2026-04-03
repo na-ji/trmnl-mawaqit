@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Handlers struct {
@@ -41,7 +42,7 @@ func (h *Handlers) Install(w http.ResponseWriter, r *http.Request) {
 		strings.NewReader(body),
 	)
 	if err != nil {
-		log.Printf("oauth token exchange failed: %v", err)
+		log.Error().Err(err).Msg("oauth token exchange failed")
 		http.Error(w, "token exchange failed", http.StatusInternalServerError)
 		return
 	}
@@ -49,7 +50,7 @@ func (h *Handlers) Install(w http.ResponseWriter, r *http.Request) {
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		log.Printf("oauth token exchange returned %d: %s", resp.StatusCode, string(respBody))
+		log.Error().Int("status", resp.StatusCode).Str("body", string(respBody)).Msg("oauth token exchange failed")
 		http.Error(w, "token exchange failed", http.StatusInternalServerError)
 		return
 	}
@@ -92,12 +93,12 @@ func (h *Handlers) InstallCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.SaveUser(user); err != nil {
-		log.Printf("save user failed: %v", err)
+		log.Error().Err(err).Str("uuid", user.UUID).Msg("save user failed")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("user installed: uuid=%s timezone=%s", user.UUID, user.Timezone)
+	log.Info().Str("uuid", user.UUID).Str("timezone", user.Timezone).Msg("user installed")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -112,7 +113,7 @@ func (h *Handlers) Manage(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.store.GetUser(uuid)
 	if err != nil {
-		log.Printf("get user failed: %v", err)
+		log.Error().Err(err).Str("uuid", uuid).Msg("get user failed")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -131,7 +132,7 @@ func (h *Handlers) Manage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.tmpl.ExecuteTemplate(w, "manage.html", data); err != nil {
-		log.Printf("render manage template: %v", err)
+		log.Error().Err(err).Str("uuid", uuid).Msg("render manage template")
 	}
 }
 
@@ -158,11 +159,11 @@ func (h *Handlers) ManageSave(w http.ResponseWriter, r *http.Request) {
 	// Validate the slug by fetching from Mawaqit API
 	_, err := h.mawaqit.GetMosqueData(mosqueSlug)
 	if err != nil {
-		log.Printf("mawaqit validation failed for slug %q: %v", mosqueSlug, err)
+		log.Error().Err(err).Str("uuid", uuid).Str("slug", mosqueSlug).Msg("mawaqit validation failed")
 	}
 
 	if err := h.store.UpdateMosqueSlug(uuid, mosqueSlug); err != nil {
-		log.Printf("update mosque slug failed: %v", err)
+		log.Error().Err(err).Str("uuid", uuid).Msg("update mosque slug failed")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -179,7 +180,7 @@ func (h *Handlers) ManageSave(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.tmpl.ExecuteTemplate(w, "manage.html", data); err != nil {
-		log.Printf("render manage template: %v", err)
+		log.Error().Err(err).Str("uuid", uuid).Msg("render manage template")
 	}
 }
 
@@ -205,7 +206,7 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.store.GetUser(userUUID)
 	if err != nil {
-		log.Printf("get user failed: %v", err)
+		log.Error().Err(err).Str("uuid", userUUID).Msg("get user failed")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -227,7 +228,7 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.mawaqit.GetMosqueData(user.MosqueSlug)
 	if err != nil {
-		log.Printf("fetch mawaqit data for %q: %v", user.MosqueSlug, err)
+		log.Error().Err(err).Str("uuid", userUUID).Str("slug", user.MosqueSlug).Msg("fetch mawaqit data")
 		http.Error(w, "failed to fetch prayer times", http.StatusBadGateway)
 		return
 	}
@@ -239,14 +240,14 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 
 	pd, err := buildPrayerDisplay(data, tz)
 	if err != nil {
-		log.Printf("build prayer display: %v", err)
+		log.Error().Err(err).Str("uuid", userUUID).Msg("build prayer display")
 		http.Error(w, "failed to compute prayer times", http.StatusInternalServerError)
 		return
 	}
 
 	result, err := renderAllMarkup(h.tmpl, pd)
 	if err != nil {
-		log.Printf("render markup: %v", err)
+		log.Error().Err(err).Str("uuid", userUUID).Msg("render markup")
 		http.Error(w, "failed to render markup", http.StatusInternalServerError)
 		return
 	}
@@ -277,12 +278,12 @@ func (h *Handlers) Uninstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.DeleteUser(payload.UserUUID); err != nil {
-		log.Printf("delete user failed: %v", err)
+		log.Error().Err(err).Str("uuid", payload.UserUUID).Msg("delete user failed")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("user uninstalled: uuid=%s", payload.UserUUID)
+	log.Info().Str("uuid", payload.UserUUID).Msg("user uninstalled")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -294,9 +295,9 @@ func extractBearerToken(r *http.Request) string {
 	return strings.TrimPrefix(auth, "Bearer ")
 }
 
-func writeJSON(w http.ResponseWriter, v interface{}) {
+func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("write json response: %v", err)
+		log.Error().Err(err).Msg("write json response")
 	}
 }

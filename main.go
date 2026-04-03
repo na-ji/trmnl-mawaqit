@@ -3,13 +3,52 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
+
+func initLogger() {
+	logFormat := envOr("LOG_FORMAT", "console")
+	if logFormat == "json" {
+		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+		log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	} else {
+		log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger()
+	}
+}
+
+// responseWriter wraps http.ResponseWriter to capture the status code.
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rw, r)
+		log.Info().
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Int("status", rw.status).
+			Dur("duration", time.Since(start)).
+			Msg("request")
+	})
+}
 
 func main() {
 	loadEnvFile(".env")
+	initLogger()
 
 	port := envOr("PORT", "8080")
 	dbPath := envOr("DB_PATH", "./data/mawaqit.db")
@@ -17,11 +56,11 @@ func main() {
 	clientID := os.Getenv("TRMNL_CLIENT_ID")
 	clientSecret := os.Getenv("TRMNL_CLIENT_SECRET")
 
-	fmt.Println("mawaqitBase: " + mawaqitBase)
+	log.Debug().Str("mawaqit_base", mawaqitBase).Msg("config loaded")
 
 	store, err := NewStore(dbPath)
 	if err != nil {
-		log.Fatalf("init store: %v", err)
+		log.Fatal().Err(err).Msg("init store")
 	}
 	defer store.Close()
 
@@ -29,7 +68,7 @@ func main() {
 		"eq": func(a, b string) bool { return a == b },
 	}).ParseGlob("templates/*.html")
 	if err != nil {
-		log.Fatalf("parse templates: %v", err)
+		log.Fatal().Err(err).Msg("parse templates")
 	}
 
 	h := &Handlers{
@@ -55,8 +94,8 @@ func main() {
 	})
 
 	addr := ":" + port
-	log.Printf("starting server on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("server error: %v", err)
+	log.Info().Str("addr", addr).Msg("starting server")
+	if err := http.ListenAndServe(addr, loggingMiddleware(mux)); err != nil {
+		log.Fatal().Err(err).Msg("server error")
 	}
 }
