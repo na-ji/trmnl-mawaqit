@@ -1,0 +1,25 @@
+services:
+  trmnl-mawaqit:
+    image: ghcr.io/na-ji/trmnl-mawaqit:main
+    hostname: "trmnl-mawaqit"
+    container_name: "trmnl-mawaqit"
+    restart: "unless-stopped"
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DB_PATH=/data/mawaqit.db
+      - LOG_FORMAT=json
+      - MAWAQIT_API_BASE=http://mawaqit/api/v1
+      - TRMNL_CLIENT_ID=${TRMNL_CLIENT_ID:?err}
+      - TRMNL_CLIENT_SECRET=${TRMNL_CLIENT_SECRET:?err}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ./data:/data
+  mawaqit-api:
+    image: "mrsofiane/mawaqit-api:latest"
+    hostname: "mawaqit-api"
+    container_name: "mawaqit-api"
+    restart: "unless-stopped"
+    environment:
+      - TZ=${TIMEZONE}

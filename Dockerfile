@@ -4,13 +4,12 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o server .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o server .
 
-FROM alpine:3.19
-RUN apk add --no-cache ca-certificates tzdata
-WORKDIR /app
-COPY --from=builder /app/server .
-COPY --from=builder /app/templates ./templates
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=builder /app/server /server
+COPY --from=builder /app/templates /templates
 
 EXPOSE 8080
-CMD ["./server"]
+ENTRYPOINT ["/server"]
