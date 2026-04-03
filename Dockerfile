@@ -8,8 +8,9 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o server .
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
-COPY --from=builder /app/server /server
-COPY --from=builder /app/templates /templates
+WORKDIR /app
+COPY --from=builder /app/server /app/server
+COPY --from=builder /app/templates /app/templates
 
 EXPOSE 8080
-ENTRYPOINT ["/server"]
+ENTRYPOINT ["/app/server"]
