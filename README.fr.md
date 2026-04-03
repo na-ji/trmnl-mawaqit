@@ -158,3 +158,8 @@ L'utilisateur clique sur « Installer » sur TRMNL
 **`handlers.go`** -- Handlers HTTP implémentant le contrat plugin TRMNL. L'endpoint markup retourne un objet JSON avec 4 clés (`markup`, `markup_half_horizontal`, `markup_half_vertical`, `markup_quadrant`), chacune contenant le HTML rendu pour la taille d'affichage TRMNL correspondante.
 
 **`i18n.go`** -- Traductions simples basées sur des maps pour l'anglais et le français. La langue est auto-détectée depuis l'en-tête `Accept-Language` du navigateur, avec possibilité de sélection manuelle via paramètre de requête.
+
+## Remerciements
+
+- [I-vortex94](https://github.com/I-vortex94) et l'équipe [TRMNL](https://usetrmnl.com) pour la création des templates du plugin
+- [mrsofiane](https://github.com/mrsofiane) pour l'API [Mawaqit](https://github.com/mrsofiane/mawaqit-api) non-officielle
