@@ -15,6 +15,7 @@ type Handlers struct {
 	store        *Store
 	mawaqit      *MawaqitClient
 	tmpl         *template.Template
+	markupCache  *MarkupCache
 	clientID     string
 	clientSecret string
 }
@@ -157,7 +158,7 @@ func (h *Handlers) ManageSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the slug by fetching from Mawaqit API
-	_, err := h.mawaqit.GetMosqueData(mosqueSlug)
+	_, err := h.mawaqit.GetMosqueData(mosqueSlug, "UTC")
 	if err != nil {
 		log.Error().Err(err).Str("uuid", uuid).Str("slug", mosqueSlug).Msg("mawaqit validation failed")
 	}
@@ -226,16 +227,22 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := h.mawaqit.GetMosqueData(user.MosqueSlug)
-	if err != nil {
-		log.Error().Err(err).Str("uuid", userUUID).Str("slug", user.MosqueSlug).Msg("fetch mawaqit data")
-		http.Error(w, "failed to fetch prayer times", http.StatusBadGateway)
+	// Check markup cache first (per-user, expires at next prayer time)
+	if cached := h.markupCache.Get(userUUID); cached != nil {
+		writeJSON(w, cached)
 		return
 	}
 
 	tz := user.Timezone
 	if tz == "" {
 		tz = "UTC"
+	}
+
+	data, err := h.mawaqit.GetMosqueData(user.MosqueSlug, tz)
+	if err != nil {
+		log.Error().Err(err).Str("uuid", userUUID).Str("slug", user.MosqueSlug).Msg("fetch mawaqit data")
+		http.Error(w, "failed to fetch prayer times", http.StatusBadGateway)
+		return
 	}
 
 	pd, err := buildPrayerDisplay(data, tz)
@@ -251,6 +258,9 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to render markup", http.StatusInternalServerError)
 		return
 	}
+
+	// Cache the rendered markup until the next prayer time
+	h.markupCache.Set(userUUID, result, pd.NextPrayerTime)
 
 	writeJSON(w, result)
 }
@@ -283,6 +293,7 @@ func (h *Handlers) Uninstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.markupCache.Delete(payload.UserUUID)
 	log.Info().Str("uuid", payload.UserUUID).Msg("user uninstalled")
 	w.WriteHeader(http.StatusOK)
 }

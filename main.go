@@ -75,6 +75,7 @@ func main() {
 		store:        store,
 		mawaqit:      NewMawaqitClient(mawaqitBase),
 		tmpl:         tmpl,
+		markupCache:  NewMarkupCache(),
 		clientID:     clientID,
 		clientSecret: clientSecret,
 	}

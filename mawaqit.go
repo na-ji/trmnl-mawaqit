@@ -45,7 +45,7 @@ func (r *MawaqitResponse) GetDayTimes(month, day int) ([]string, error) {
 
 type cacheEntry struct {
 	data      *MawaqitResponse
-	fetchedAt time.Time
+	expiresAt time.Time
 }
 
 type MawaqitClient struct {
@@ -53,6 +53,7 @@ type MawaqitClient struct {
 	httpClient *http.Client
 	mu         sync.RWMutex
 	cache      map[string]cacheEntry
+	nowFunc    func() time.Time
 }
 
 func NewMawaqitClient(baseURL string) *MawaqitClient {
@@ -60,12 +61,51 @@ func NewMawaqitClient(baseURL string) *MawaqitClient {
 		baseURL:    baseURL,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		cache:      make(map[string]cacheEntry),
+		nowFunc:    time.Now,
 	}
 }
 
-func (c *MawaqitClient) GetMosqueData(slug string) (*MawaqitResponse, error) {
+// ishaExpiry computes the expiry time for today's prayer cache based on Isha time.
+// The cache expires at Isha time in the given timezone, so that after the last
+// prayer of the day, the next fetch retrieves tomorrow's data.
+// Falls back to 1 hour from now if Isha time cannot be determined.
+func (c *MawaqitClient) ishaExpiry(data *MawaqitResponse, timezone string) time.Time {
+	now := c.nowFunc()
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return now.Add(time.Hour)
+	}
+	nowLocal := now.In(loc)
+	month := int(nowLocal.Month()) - 1
+	day := nowLocal.Day()
+
+	times, err := data.GetDayTimes(month, day)
+	if err != nil || len(times) < 6 {
+		return now.Add(time.Hour)
+	}
+
+	// Isha is the 6th prayer (index 5)
+	ishaMinutes, err := timeToMinutes(times[5])
+	if err != nil {
+		return now.Add(time.Hour)
+	}
+
+	ishaTime := time.Date(nowLocal.Year(), nowLocal.Month(), nowLocal.Day(),
+		ishaMinutes/60, ishaMinutes%60, 0, 0, loc)
+
+	if nowLocal.After(ishaTime) {
+		// Isha has passed — expire immediately so tomorrow's data is fetched
+		return now
+	}
+	return ishaTime.In(time.UTC)
+}
+
+// GetMosqueData returns mosque prayer data, using a cache that expires after Isha time.
+// The timezone parameter is needed to compute when Isha occurs in the mosque's local time.
+func (c *MawaqitClient) GetMosqueData(slug string, timezone string) (*MawaqitResponse, error) {
+	now := c.nowFunc()
 	c.mu.RLock()
-	if entry, ok := c.cache[slug]; ok && time.Since(entry.fetchedAt) < time.Hour {
+	if entry, ok := c.cache[slug]; ok && now.Before(entry.expiresAt) {
 		c.mu.RUnlock()
 		log.Debug().Str("slug", slug).Msg("mawaqit cache hit")
 		return entry.data, nil
@@ -90,8 +130,10 @@ func (c *MawaqitClient) GetMosqueData(slug string) (*MawaqitResponse, error) {
 		return nil, fmt.Errorf("decode mawaqit response: %w", err)
 	}
 
+	expiry := c.ishaExpiry(&data, timezone)
+
 	c.mu.Lock()
-	c.cache[slug] = cacheEntry{data: &data, fetchedAt: time.Now()}
+	c.cache[slug] = cacheEntry{data: &data, expiresAt: expiry}
 	c.mu.Unlock()
 
 	return &data, nil

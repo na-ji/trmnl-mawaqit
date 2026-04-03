@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,16 +22,21 @@ type PrayerDisplay struct {
 	Jumua      string
 	Jumua2     string
 	Jumua3     string
+	// NextPrayerTime is the absolute time of the next prayer, used for markup cache expiry.
+	NextPrayerTime time.Time
 }
 
 var names = []string{"Fajr", "Shuruq", "Dohr", "Asr", "Maghrib", "Isha"}
+
+// nowFunc can be overridden in tests; defaults to time.Now.
+var nowFunc = time.Now
 
 func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay, error) {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		loc = time.UTC
 	}
-	now := time.Now().In(loc)
+	now := nowFunc().In(loc)
 
 	month := int(now.Month()) - 1 // 0-indexed
 	day := now.Day()              // 1-indexed
@@ -63,10 +69,21 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 		}
 	}
 
+	// Compute the absolute time of the next prayer for cache expiry
+	nextMinutes, _ := timeToMinutes(times[nextIdx])
+	nextPrayerTime := time.Date(now.Year(), now.Month(), now.Day(),
+		nextMinutes/60, nextMinutes%60, 0, 0, loc)
+	// If next prayer is Fajr (wrap around), it means all prayers passed today;
+	// set expiry to tomorrow's Fajr
+	if nextIdx == 0 && nowMinutes > 0 {
+		nextPrayerTime = nextPrayerTime.AddDate(0, 0, 1)
+	}
+
 	pd := &PrayerDisplay{
-		MosqueName: data.RawData.Name,
-		Prayers:    prayers,
-		Jumua:      data.RawData.Jumua,
+		MosqueName:     data.RawData.Name,
+		Prayers:        prayers,
+		Jumua:          data.RawData.Jumua,
+		NextPrayerTime: nextPrayerTime,
 	}
 	if data.RawData.Jumua2 != nil {
 		pd.Jumua2 = *data.RawData.Jumua2
@@ -76,6 +93,50 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 	}
 
 	return pd, nil
+}
+
+// MarkupCache caches rendered markup per user, expiring at the next prayer time.
+type MarkupCache struct {
+	mu      sync.RWMutex
+	entries map[string]markupCacheEntry
+	nowFunc func() time.Time
+}
+
+type markupCacheEntry struct {
+	result    *MarkupResult
+	expiresAt time.Time
+}
+
+func NewMarkupCache() *MarkupCache {
+	return &MarkupCache{
+		entries: make(map[string]markupCacheEntry),
+		nowFunc: time.Now,
+	}
+}
+
+// Get returns a cached MarkupResult for the given user UUID, or nil if expired/missing.
+func (mc *MarkupCache) Get(userUUID string) *MarkupResult {
+	mc.mu.RLock()
+	defer mc.mu.RUnlock()
+	entry, ok := mc.entries[userUUID]
+	if !ok || mc.nowFunc().After(entry.expiresAt) {
+		return nil
+	}
+	return entry.result
+}
+
+// Set stores a MarkupResult for the given user UUID, expiring at expiresAt.
+func (mc *MarkupCache) Set(userUUID string, result *MarkupResult, expiresAt time.Time) {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+	mc.entries[userUUID] = markupCacheEntry{result: result, expiresAt: expiresAt}
+}
+
+// Delete removes a user's cached markup (e.g., on uninstall).
+func (mc *MarkupCache) Delete(userUUID string) {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+	delete(mc.entries, userUUID)
 }
 
 func timeToMinutes(t string) (int, error) {
