@@ -1,10 +1,10 @@
 {{ define "manage.html" }}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mawaqit Prayer Times - Settings</title>
+    <title>{{ .T.PageTitle }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -20,6 +20,21 @@
             border-radius: 12px;
             padding: 32px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .lang-switcher {
+            text-align: right;
+            margin-bottom: 12px;
+        }
+        .lang-switcher a {
+            text-decoration: none;
+            color: #999;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .lang-switcher a.active {
+            color: #333;
+            border-bottom: 2px solid #333;
         }
         h1 {
             font-size: 22px;
@@ -79,17 +94,23 @@
 </head>
 <body>
     <div class="container">
-        <h1>Mawaqit Prayer Times</h1>
-        <p class="subtitle">Configure your mosque to display prayer times on your TRMNL device.</p>
+        <div class="lang-switcher">
+            <a href="/manage?uuid={{ .UUID }}&lang=en" class="{{ if eq .Lang "en" }}active{{ end }}">EN</a>
+            <a href="/manage?uuid={{ .UUID }}&lang=fr" class="{{ if eq .Lang "fr" }}active{{ end }}">FR</a>
+        </div>
+
+        <h1>{{ .T.Heading }}</h1>
+        <p class="subtitle">{{ .T.Subtitle }}</p>
 
         <form method="POST" action="/manage">
             <input type="hidden" name="uuid" value="{{ .UUID }}">
+            <input type="hidden" name="lang" value="{{ .Lang }}">
 
-            <label for="mosque_slug">Mosque Slug</label>
-            <input type="text" id="mosque_slug" name="mosque_slug" value="{{ .MosqueSlug }}" placeholder="e.g. tawba-bussy-saint-georges" required>
-            <p class="hint">Find your mosque slug at mawaqit.net. It's the part after the URL, e.g. mawaqit.net/<strong>your-mosque-slug</strong></p>
+            <label for="mosque_slug">{{ .T.FormLabel }}</label>
+            <input type="text" id="mosque_slug" name="mosque_slug" value="{{ .MosqueSlug }}" placeholder="{{ .T.Placeholder }}" required>
+            <p class="hint">{{ .T.HintPrefix }}<strong>{{ .T.HintEmphasis }}</strong></p>
 
-            <button type="submit">Save Settings</button>
+            <button type="submit">{{ .T.Button }}</button>
         </form>
 
         {{ if .Message }}

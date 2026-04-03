@@ -119,13 +119,18 @@ func (h *Handlers) Manage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lang := detectLang(r)
 	data := struct {
 		UUID       string
 		MosqueSlug string
 		Message    string
+		Lang       string
+		T          Translations
 	}{
 		UUID:       uuid,
 		MosqueSlug: "",
+		Lang:       lang,
+		T:          T(lang),
 	}
 	if user != nil {
 		data.MosqueSlug = user.MosqueSlug
@@ -169,14 +174,23 @@ func (h *Handlers) ManageSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lang := r.FormValue("lang")
+	if lang != "fr" && lang != "en" {
+		lang = "en"
+	}
+
 	data := struct {
 		UUID       string
 		MosqueSlug string
 		Message    string
+		Lang       string
+		T          Translations
 	}{
 		UUID:       uuid,
 		MosqueSlug: mosqueSlug,
-		Message:    "Settings saved successfully!",
+		Message:    T(lang)["SuccessMsg"],
+		Lang:       lang,
+		T:          T(lang),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
