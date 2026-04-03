@@ -11,7 +11,9 @@ The only configuration is your mosque slug (e.g. `tawba-bussy-saint-georges`), a
 - Jumua (Friday prayer) times displayed in the footer
 - 4 TRMNL layout variants: full, half horizontal, half vertical, quadrant
 - Settings page for configuring your mosque
-- 1-hour API response caching to minimize external calls
+- Two-layer smart caching: prayer times cached until Isha, markup cached until next prayer
+- Structured logging with zerolog (JSON or console output)
+- Markup previewer for local development
 
 ## Quick Start
 
@@ -37,17 +39,26 @@ go run .
 
 The server starts on port 8080 by default. Visit `http://localhost:8080/health` to verify.
 
-### Run with Docker
+### Run with Docker Compose
 
 ```bash
-docker build -t trmnl-mawaqit .
-docker run -p 8080:8080 \
-  -e TRMNL_CLIENT_ID=your_client_id \
-  -e TRMNL_CLIENT_SECRET=your_client_secret \
-  -e MAWAQIT_API_BASE=https://yourapi/api/v1 \
-  -v mawaqit-data:/app/data \
-  trmnl-mawaqit
+cp .env.example .env
+# Edit .env with your TRMNL credentials
+
+docker compose up -d
 ```
+
+This pulls the pre-built image from `ghcr.io/na-ji/trmnl-mawaqit:main` and starts the server alongside the Mawaqit API.
+
+### Preview Templates
+
+Render all 4 layout variants in your browser without running the server:
+
+```bash
+go run . preview --slug=your-mosque-slug --timezone=Europe/Paris
+```
+
+This generates a `preview.html` file using the TRMNL framework CSS and opens it in your default browser.
 
 ## Environment Variables
 
@@ -58,6 +69,7 @@ docker run -p 8080:8080 \
 | `MAWAQIT_API_BASE`    | Yes      | -                   | Unoficial Mawaqit API base URL (cf https://github.com/mrsofiane/mawaqit-api) |
 | `PORT`                | No       | `8080`              | HTTP listen port                                                             |
 | `DB_PATH`             | No       | `./data/mawaqit.db` | SQLite database file path                                                    |
+| `LOG_FORMAT`          | No       | `console`           | Log output format: `console` for dev, `json` for production                  |
 
 ## TRMNL Plugin Registration
 
@@ -77,10 +89,11 @@ When registering this plugin on the TRMNL developer portal, configure these endp
 
 ```
 trmnl-mawaqit/
-├── main.go           # Entry point, router, config loading
+├── main.go           # Entry point, router, config, logging middleware
 ├── handlers.go       # HTTP handlers for all TRMNL endpoints
-├── mawaqit.go        # Mawaqit API client with in-memory caching
-├── markup.go         # Prayer time computation + template rendering
+├── mawaqit.go        # Mawaqit API client with Isha-based TTL caching
+├── markup.go         # Prayer time computation, template rendering, markup cache
+├── preview.go        # CLI preview command for local template testing
 ├── store.go          # SQLite user storage (CRUD)
 ├── templates/
 │   ├── full.html              # Full-screen layout (800x480)
@@ -88,8 +101,10 @@ trmnl-mawaqit/
 │   ├── half_vertical.html     # Half vertical (400x480)
 │   ├── quadrant.html          # Quadrant (400x240)
 │   └── manage.html            # Settings form
-├── Dockerfile
-└── .env.example
+├── Dockerfile                 # Multi-stage build with distroless runner
+├── docker-compose.yml
+└── .github/workflows/
+    └── docker.yml             # CI: build and push to GHCR
 ```
 
 All Go code lives in `package main` -- no sub-packages needed at this scale.
@@ -112,8 +127,9 @@ User clicks "Install" on TRMNL
   POST /manage ──► Save mosque slug to DB
         │
         ▼
-  POST /markup ──► Fetch Mawaqit data ──► Compute today's times
-                   ──► Determine next prayer ──► Render 4 HTML layouts
+  POST /markup ──► Check markup cache ──► Fetch Mawaqit data
+                   ──► Compute today's times ──► Determine next prayer
+                   ──► Render 4 HTML layouts ──► Cache until next prayer
                    ──► Return JSON with all markup variants
         │
         ▼
@@ -124,9 +140,9 @@ User clicks "Install" on TRMNL
 
 **`store.go`** -- SQLite storage using `modernc.org/sqlite` (pure Go, no CGO). Stores user UUID, access token, mosque slug, and IANA timezone. WAL mode enabled for concurrent reads.
 
-**`mawaqit.go`** -- HTTP client for the Mawaqit API. Fetches mosque data by slug and caches responses in memory for 1 hour per mosque. The API returns a calendar structure: 12 months, each a map from day number (string) to an array of 6 prayer times.
+**`mawaqit.go`** -- HTTP client for the Mawaqit API. Fetches mosque data by slug and caches responses until Isha time in the mosque's timezone. After the last prayer of the day, the cache expires so the next fetch retrieves tomorrow's data.
 
-**`markup.go`** -- Takes Mawaqit API data and the user's timezone, extracts today's prayer times from the calendar, determines which prayer is next by comparing each time against the current local time, and renders all 4 template variants. If all prayers have passed for the day, Fajr is marked as next.
+**`markup.go`** -- Takes Mawaqit API data and the user's timezone, extracts today's prayer times from the calendar, determines which prayer is next by comparing each time against the current local time, and renders all 4 template variants. If all prayers have passed for the day, Fajr is marked as next. Includes a per-user markup cache that expires at the next prayer time.
 
 **`handlers.go`** -- HTTP handlers implementing the TRMNL plugin contract. The markup endpoint returns a JSON object with 4 keys (`markup`, `markup_half_horizontal`, `markup_half_vertical`, `markup_quadrant`), each containing rendered HTML for the corresponding TRMNL display size.
 
