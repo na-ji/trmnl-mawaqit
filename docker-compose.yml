@@ -10,7 +10,7 @@ services:
       - PORT=8080
       - DB_PATH=/data/mawaqit.db
       - LOG_FORMAT=json
-      - MAWAQIT_API_BASE=http://mawaqit/api/v1
+      - MAWAQIT_API_BASE=http://mawaqit-api/api/v1
       - TRMNL_CLIENT_ID=${TRMNL_CLIENT_ID:?err}
       - TRMNL_CLIENT_SECRET=${TRMNL_CLIENT_SECRET:?err}
       - TZ=${TIMEZONE}
