@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"testing"
+	"time"
 )
 
 func TestTimeToMinutes(t *testing.T) {
@@ -61,6 +62,155 @@ func TestBuildPrayerDisplay(t *testing.T) {
 
 	if pd.Jumua != "13:00" {
 		t.Errorf("Jumua = %q, want %q", pd.Jumua, "13:00")
+	}
+}
+
+func TestBuildPrayerDisplayAfterIsha(t *testing.T) {
+	todayTimes := []string{"05:30", "07:00", "12:30", "15:45", "18:00", "19:30"}
+	tomorrowTimes := []string{"05:45", "07:15", "12:35", "15:50", "18:05", "19:35"}
+
+	data := makeMawaqitResponseDays(t, "Test Mosque", "13:00", nil, nil, map[dayKey][]string{
+		{month: 0, day: 15}: todayTimes,
+		{month: 0, day: 16}: tomorrowTimes,
+	})
+
+	// 20:00 on Jan 15 — after Isha (19:30)
+	orig := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2025, 1, 15, 20, 0, 0, 0, time.UTC)
+	}
+	defer func() { nowFunc = orig }()
+
+	pd, err := buildPrayerDisplay(data, "UTC")
+	if err != nil {
+		t.Fatalf("buildPrayerDisplay: %v", err)
+	}
+
+	// Should display tomorrow's times
+	for i, want := range tomorrowTimes {
+		if pd.Prayers[i].Time != want {
+			t.Errorf("Prayers[%d].Time = %q, want %q (tomorrow)", i, pd.Prayers[i].Time, want)
+		}
+	}
+
+	// Fajr should be marked as next
+	if !pd.Prayers[0].IsNext {
+		t.Error("expected Fajr to be marked as next prayer after Isha")
+	}
+	for i := 1; i < len(pd.Prayers); i++ {
+		if pd.Prayers[i].IsNext {
+			t.Errorf("Prayers[%d] (%s) should not be marked as next", i, pd.Prayers[i].Name)
+		}
+	}
+
+	// Cache expiry should be tomorrow's Fajr
+	wantExpiry := time.Date(2025, 1, 16, 5, 45, 0, 0, time.UTC)
+	if !pd.NextPrayerTime.Equal(wantExpiry) {
+		t.Errorf("NextPrayerTime = %v, want %v", pd.NextPrayerTime, wantExpiry)
+	}
+}
+
+func TestBuildPrayerDisplayBeforeFajr(t *testing.T) {
+	todayTimes := []string{"05:30", "07:00", "12:30", "15:45", "18:00", "19:30"}
+
+	data := makeMawaqitResponse(t, "Test Mosque", "13:00", nil, nil, todayTimes)
+
+	// 00:30 on any day — before Fajr, should show today's times
+	orig := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2025, 1, 15, 0, 30, 0, 0, time.UTC)
+	}
+	defer func() { nowFunc = orig }()
+
+	pd, err := buildPrayerDisplay(data, "UTC")
+	if err != nil {
+		t.Fatalf("buildPrayerDisplay: %v", err)
+	}
+
+	// Should display today's times (not tomorrow's)
+	for i, want := range todayTimes {
+		if pd.Prayers[i].Time != want {
+			t.Errorf("Prayers[%d].Time = %q, want %q (today)", i, pd.Prayers[i].Time, want)
+		}
+	}
+
+	// Fajr should be next
+	if !pd.Prayers[0].IsNext {
+		t.Error("expected Fajr to be marked as next prayer before Fajr")
+	}
+
+	// Cache expiry should be today's Fajr (not tomorrow)
+	wantExpiry := time.Date(2025, 1, 15, 5, 30, 0, 0, time.UTC)
+	if !pd.NextPrayerTime.Equal(wantExpiry) {
+		t.Errorf("NextPrayerTime = %v, want %v", pd.NextPrayerTime, wantExpiry)
+	}
+}
+
+func TestBuildPrayerDisplayAfterIshaMonthBoundary(t *testing.T) {
+	janTimes := []string{"05:30", "07:00", "12:30", "15:45", "18:00", "19:30"}
+	febTimes := []string{"05:15", "06:45", "12:25", "15:40", "18:10", "19:40"}
+
+	data := makeMawaqitResponseDays(t, "Test Mosque", "13:00", nil, nil, map[dayKey][]string{
+		{month: 0, day: 31}: janTimes, // Jan 31
+		{month: 1, day: 1}:  febTimes, // Feb 1
+	})
+
+	// 21:00 on Jan 31 — after Isha, tomorrow is Feb 1
+	orig := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2025, 1, 31, 21, 0, 0, 0, time.UTC)
+	}
+	defer func() { nowFunc = orig }()
+
+	pd, err := buildPrayerDisplay(data, "UTC")
+	if err != nil {
+		t.Fatalf("buildPrayerDisplay: %v", err)
+	}
+
+	// Should display Feb 1 times
+	for i, want := range febTimes {
+		if pd.Prayers[i].Time != want {
+			t.Errorf("Prayers[%d].Time = %q, want %q (Feb 1)", i, pd.Prayers[i].Time, want)
+		}
+	}
+
+	if !pd.Prayers[0].IsNext {
+		t.Error("expected Fajr to be marked as next prayer")
+	}
+
+	// Cache expiry should be Feb 1 Fajr
+	wantExpiry := time.Date(2025, 2, 1, 5, 15, 0, 0, time.UTC)
+	if !pd.NextPrayerTime.Equal(wantExpiry) {
+		t.Errorf("NextPrayerTime = %v, want %v", pd.NextPrayerTime, wantExpiry)
+	}
+}
+
+func TestBuildPrayerDisplayMidDay(t *testing.T) {
+	todayTimes := []string{"05:30", "07:00", "12:30", "15:45", "18:00", "19:30"}
+
+	data := makeMawaqitResponse(t, "Test Mosque", "13:00", nil, nil, todayTimes)
+
+	// 13:00 — between Dohr (12:30) and Asr (15:45)
+	orig := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2025, 1, 15, 13, 0, 0, 0, time.UTC)
+	}
+	defer func() { nowFunc = orig }()
+
+	pd, err := buildPrayerDisplay(data, "UTC")
+	if err != nil {
+		t.Fatalf("buildPrayerDisplay: %v", err)
+	}
+
+	// Asr (index 3) should be next
+	if !pd.Prayers[3].IsNext {
+		t.Error("expected Asr to be marked as next prayer")
+	}
+
+	// Cache expiry should be today's Asr
+	wantExpiry := time.Date(2025, 1, 15, 15, 45, 0, 0, time.UTC)
+	if !pd.NextPrayerTime.Equal(wantExpiry) {
+		t.Errorf("NextPrayerTime = %v, want %v", pd.NextPrayerTime, wantExpiry)
 	}
 }
 
@@ -193,6 +343,34 @@ func searchString(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+type dayKey struct {
+	month int // 0-indexed
+	day   int // 1-indexed
+}
+
+func makeMawaqitResponseDays(t *testing.T, name, jumua string, jumua2, jumua3 *string, days map[dayKey][]string) *MawaqitResponse {
+	t.Helper()
+	calendar := make([]map[string]json.RawMessage, 12)
+	for i := range calendar {
+		calendar[i] = make(map[string]json.RawMessage)
+	}
+	for dk, times := range days {
+		timesJSON, err := json.Marshal(times)
+		if err != nil {
+			t.Fatalf("marshal times: %v", err)
+		}
+		calendar[dk.month][fmt.Sprintf("%d", dk.day)] = json.RawMessage(timesJSON)
+	}
+
+	data := &MawaqitResponse{}
+	data.RawData.Name = name
+	data.RawData.Jumua = jumua
+	data.RawData.Jumua2 = jumua2
+	data.RawData.Jumua3 = jumua3
+	data.RawData.Calendar = calendar
+	return data
 }
 
 func makeMawaqitResponse(t *testing.T, name, jumua string, jumua2, jumua3 *string, dayTimes []string) *MawaqitResponse {

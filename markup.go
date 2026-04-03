@@ -48,7 +48,7 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 
 	// Determine next prayer
 	nowMinutes := now.Hour()*60 + now.Minute()
-	nextIdx := 0 // default to Fajr (wrap around)
+	nextIdx := -1
 	for i, t := range times {
 		m, err := timeToMinutes(t)
 		if err != nil {
@@ -57,6 +57,17 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 		if m > nowMinutes {
 			nextIdx = i
 			break
+		}
+	}
+
+	// All prayers have passed (after Isha) — switch to tomorrow's times
+	afterIsha := nextIdx == -1
+	if afterIsha {
+		nextIdx = 0 // Fajr is next
+		tomorrow := now.AddDate(0, 0, 1)
+		tomorrowTimes, err := data.GetDayTimes(int(tomorrow.Month())-1, tomorrow.Day())
+		if err == nil {
+			times = tomorrowTimes
 		}
 	}
 
@@ -73,9 +84,7 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 	nextMinutes, _ := timeToMinutes(times[nextIdx])
 	nextPrayerTime := time.Date(now.Year(), now.Month(), now.Day(),
 		nextMinutes/60, nextMinutes%60, 0, 0, loc)
-	// If next prayer is Fajr (wrap around), it means all prayers passed today;
-	// set expiry to tomorrow's Fajr
-	if nextIdx == 0 && nowMinutes > 0 {
+	if afterIsha {
 		nextPrayerTime = nextPrayerTime.AddDate(0, 0, 1)
 	}
 
