@@ -47,6 +47,10 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	if runPreview(os.Args) {
+		return
+	}
+
 	loadEnvFile(".env")
 	initLogger()
 
