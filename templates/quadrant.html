@@ -3,10 +3,10 @@
 
   <div class="grid grid--cols-3 lg:grid--cols-2 gap">
     {{ range .Prayers }}
-    <div class="item{{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--1">
+    <div class="item portrait:col--span-2{{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--1">
       <div class="meta"></div>
       <div class="content">
-        <span class="value value--small lg:value--large value--tnums">{{ .Time }}</span>
+        <span class="value value--small lg:value--large lg:portrait:value--base value--tnums">{{ .Time }}</span>
         <span class="label label--xsmall lg:label--small{{ if .IsNext }} label--inverted{{ end }}">{{ .Name }}</span>
       </div>
     </div>
