@@ -10,10 +10,11 @@ import (
 )
 
 type User struct {
-	UUID        string
-	AccessToken string
-	MosqueSlug  string
-	Timezone    string
+	UUID             string
+	AccessToken      string
+	MosqueSlug       string
+	Timezone         string
+	PluginSettingID  int64
 }
 
 type Store struct {
@@ -39,19 +40,23 @@ func NewStore(dbPath string) (*Store, error) {
 			uuid TEXT PRIMARY KEY,
 			access_token TEXT NOT NULL,
 			mosque_slug TEXT NOT NULL DEFAULT '',
-			timezone TEXT NOT NULL DEFAULT ''
+			timezone TEXT NOT NULL DEFAULT '',
+			plugin_setting_id INTEGER NOT NULL DEFAULT 0
 		)
 	`); err != nil {
 		return nil, fmt.Errorf("create table: %w", err)
 	}
+
+	// Add plugin_setting_id column if missing (existing databases).
+	db.Exec(`ALTER TABLE users ADD COLUMN plugin_setting_id INTEGER NOT NULL DEFAULT 0`)
 
 	return &Store{db: db}, nil
 }
 
 func (s *Store) SaveUser(u User) error {
 	_, err := s.db.Exec(
-		`INSERT OR REPLACE INTO users (uuid, access_token, mosque_slug, timezone) VALUES (?, ?, ?, ?)`,
-		u.UUID, u.AccessToken, u.MosqueSlug, u.Timezone,
+		`INSERT OR REPLACE INTO users (uuid, access_token, mosque_slug, timezone, plugin_setting_id) VALUES (?, ?, ?, ?, ?)`,
+		u.UUID, u.AccessToken, u.MosqueSlug, u.Timezone, u.PluginSettingID,
 	)
 	return err
 }
@@ -59,8 +64,8 @@ func (s *Store) SaveUser(u User) error {
 func (s *Store) GetUser(uuid string) (*User, error) {
 	var u User
 	err := s.db.QueryRow(
-		`SELECT uuid, access_token, mosque_slug, timezone FROM users WHERE uuid = ?`, uuid,
-	).Scan(&u.UUID, &u.AccessToken, &u.MosqueSlug, &u.Timezone)
+		`SELECT uuid, access_token, mosque_slug, timezone, plugin_setting_id FROM users WHERE uuid = ?`, uuid,
+	).Scan(&u.UUID, &u.AccessToken, &u.MosqueSlug, &u.Timezone, &u.PluginSettingID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

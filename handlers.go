@@ -71,9 +71,10 @@ func (h *Handlers) InstallCallback(w http.ResponseWriter, r *http.Request) {
 
 	var payload struct {
 		User struct {
-			UUID         string `json:"uuid"`
-			Name         string `json:"name"`
-			TimeZoneIANA string `json:"time_zone_iana"`
+			UUID            string `json:"uuid"`
+			Name            string `json:"name"`
+			TimeZoneIANA    string `json:"time_zone_iana"`
+			PluginSettingID int64  `json:"plugin_setting_id"`
 		} `json:"user"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -87,10 +88,11 @@ func (h *Handlers) InstallCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := User{
-		UUID:        payload.User.UUID,
-		AccessToken: accessToken,
-		MosqueSlug:  "",
-		Timezone:    payload.User.TimeZoneIANA,
+		UUID:            payload.User.UUID,
+		AccessToken:     accessToken,
+		MosqueSlug:      "",
+		Timezone:        payload.User.TimeZoneIANA,
+		PluginSettingID: payload.User.PluginSettingID,
 	}
 
 	if err := h.store.SaveUser(user); err != nil {
@@ -122,11 +124,12 @@ func (h *Handlers) Manage(w http.ResponseWriter, r *http.Request) {
 
 	lang := detectLang(r)
 	data := struct {
-		UUID       string
-		MosqueSlug string
-		Message    string
-		Lang       string
-		T          Translations
+		UUID            string
+		MosqueSlug      string
+		Message         string
+		Lang            string
+		T               Translations
+		PluginSettingID int64
 	}{
 		UUID:       uuid,
 		MosqueSlug: "",
@@ -135,6 +138,7 @@ func (h *Handlers) Manage(w http.ResponseWriter, r *http.Request) {
 	}
 	if user != nil {
 		data.MosqueSlug = user.MosqueSlug
+		data.PluginSettingID = user.PluginSettingID
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -180,18 +184,25 @@ func (h *Handlers) ManageSave(w http.ResponseWriter, r *http.Request) {
 		lang = "en"
 	}
 
+	var pluginSettingID int64
+	if user, err := h.store.GetUser(uuid); err == nil && user != nil {
+		pluginSettingID = user.PluginSettingID
+	}
+
 	data := struct {
-		UUID       string
-		MosqueSlug string
-		Message    string
-		Lang       string
-		T          Translations
+		UUID            string
+		MosqueSlug      string
+		Message         string
+		Lang            string
+		T               Translations
+		PluginSettingID int64
 	}{
-		UUID:       uuid,
-		MosqueSlug: mosqueSlug,
-		Message:    T(lang)["SuccessMsg"],
-		Lang:       lang,
-		T:          T(lang),
+		UUID:            uuid,
+		MosqueSlug:      mosqueSlug,
+		Message:         T(lang)["SuccessMsg"],
+		Lang:            lang,
+		T:               T(lang),
+		PluginSettingID: pluginSettingID,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

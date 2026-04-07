@@ -90,6 +90,24 @@
             color: #2e7d32;
             font-size: 14px;
         }
+        .back-link {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            background: white;
+            color: #333;
+            border: 2px solid #333;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            background: #f5f5f5;
+        }
     </style>
 </head>
 <body>
@@ -115,6 +133,9 @@
 
         {{ if .Message }}
         <div class="message">{{ .Message }}</div>
+        {{ if .PluginSettingID }}
+        <a class="back-link" href="https://usetrmnl.com/plugin_settings/{{ .PluginSettingID }}/edit?force_refresh=true">{{ .T.BackToTRMNL }}</a>
+        {{ end }}
         {{ end }}
     </div>
 </body>

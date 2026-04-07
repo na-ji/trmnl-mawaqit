@@ -19,6 +19,7 @@ var translations = map[string]Translations{
 		"HintEmphasis": "your-mosque-slug",
 		"Button":       "Save Settings",
 		"SuccessMsg":   "Settings saved successfully!",
+		"BackToTRMNL":  "Back to TRMNL",
 	},
 	"fr": {
 		"PageTitle":    "Mawaqit Horaires de Prière - Paramètres",
@@ -30,6 +31,7 @@ var translations = map[string]Translations{
 		"HintEmphasis": "identifiant-de-votre-mosquee",
 		"Button":       "Enregistrer",
 		"SuccessMsg":   "Paramètres enregistrés avec succès !",
+		"BackToTRMNL":  "Retour à TRMNL",
 	},
 }
 
