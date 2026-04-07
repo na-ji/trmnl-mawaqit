@@ -146,6 +146,56 @@ func TestBuildPrayerDisplayBeforeFajr(t *testing.T) {
 	}
 }
 
+func TestBuildPrayerDisplayAfterIshaDSTTransition(t *testing.T) {
+	// US/Eastern: March 9, 2025 clocks spring forward from 2:00 to 3:00 (EST → EDT)
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Skipf("timezone not available: %v", err)
+	}
+
+	mar8Times := []string{"05:30", "07:00", "12:30", "15:45", "18:00", "19:30"}
+	mar9Times := []string{"05:25", "06:55", "12:28", "15:43", "18:05", "19:35"}
+
+	data := makeMawaqitResponseDays(t, "Test Mosque", "13:00", nil, nil, map[dayKey][]string{
+		{month: 2, day: 8}: mar8Times, // March 8 (EST)
+		{month: 2, day: 9}: mar9Times, // March 9 (EDT, clocks spring forward)
+	})
+
+	// 20:00 EST on March 8 — after Isha, tomorrow has DST change
+	orig := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2025, 3, 8, 20, 0, 0, 0, loc)
+	}
+	defer func() { nowFunc = orig }()
+
+	pd, err := buildPrayerDisplay(data, "America/New_York")
+	if err != nil {
+		t.Fatalf("buildPrayerDisplay: %v", err)
+	}
+
+	// Should display March 9 times
+	for i, want := range mar9Times {
+		if pd.Prayers[i].Time != want {
+			t.Errorf("Prayers[%d].Time = %q, want %q (Mar 9 EDT)", i, pd.Prayers[i].Time, want)
+		}
+	}
+
+	if !pd.Prayers[0].IsNext {
+		t.Error("expected Fajr to be marked as next prayer")
+	}
+
+	// Cache expiry should be March 9 05:25 EDT (= 09:25 UTC, since EDT is UTC-4)
+	wantExpiry := time.Date(2025, 3, 9, 5, 25, 0, 0, loc)
+	if !pd.NextPrayerTime.Equal(wantExpiry) {
+		t.Errorf("NextPrayerTime = %v, want %v", pd.NextPrayerTime, wantExpiry)
+	}
+	// Verify the UTC offset changed (EDT not EST)
+	_, offset := pd.NextPrayerTime.In(loc).Zone()
+	if offset != -4*3600 {
+		t.Errorf("expected EDT (UTC-4) offset, got %d", offset)
+	}
+}
+
 func TestBuildPrayerDisplayAfterIshaMonthBoundary(t *testing.T) {
 	janTimes := []string{"05:30", "07:00", "12:30", "15:45", "18:00", "19:30"}
 	febTimes := []string{"05:15", "06:45", "12:25", "15:40", "18:10", "19:40"}
