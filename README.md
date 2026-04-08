@@ -86,13 +86,23 @@ The server starts on port 8080 by default. Visit `http://localhost:8080/health` 
 
 ### Preview Templates
 
-Render all 4 layout variants in your browser without running the server:
+Preview all 4 layout variants locally using [trmnlp](https://github.com/usetrmnl/trmnlp):
 
 ```bash
-go run . preview --slug=your-mosque-slug --timezone=Europe/Paris
+# Terminal 1: generate liquid files from Go templates (with auto-rebuild on changes)
+go run . liquidgen --watch
+
+# Terminal 2: start the trmnlp preview server
+trmnlp serve
 ```
 
-This generates a `preview.html` file using the TRMNL framework CSS and opens it in your default browser.
+Or via Docker:
+```bash
+go run . liquidgen
+docker run --publish 4567:4567 --volume "$(pwd):/plugin" trmnl/trmnlp serve
+```
+
+Go templates in `templates/` are the single source of truth. The `liquidgen` subcommand renders them with mock data into `src/*.liquid` files that trmnlp serves with the TRMNL Design System.
 
 ### Project Structure
 
@@ -102,8 +112,8 @@ trmnl-mawaqit/
 ├── handlers.go       # HTTP handlers for all TRMNL endpoints
 ├── mawaqit.go        # Mawaqit API client with Isha-based TTL caching
 ├── markup.go         # Prayer time computation, template rendering, markup cache
+├── liquidgen.go      # CLI subcommand: generates src/*.liquid from Go templates
 ├── i18n.go           # Translations (EN/FR) and language detection
-├── preview.go        # CLI preview command for local template testing
 ├── store.go          # SQLite user storage (CRUD)
 ├── cmd/healthcheck/  # Tiny health check binary for Docker HEALTHCHECK
 ├── templates/
@@ -112,6 +122,8 @@ trmnl-mawaqit/
 │   ├── half_vertical.html     # Half vertical (400x480)
 │   ├── quadrant.html          # Quadrant (400x240)
 │   └── manage.html            # Settings form (i18n)
+├── src/                       # Generated liquid files for trmnlp (gitignored)
+├── .trmnlp.yml                # trmnlp config (file watching, timezone)
 ├── Dockerfile                 # Multi-stage build with distroless runner
 ├── docker-compose.yml
 └── .github/workflows/

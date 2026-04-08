@@ -1,0 +1,13 @@
+---
+watch:
+  - src
+  - .trmnlp.yml
+
+time_zone: Europe/Paris
+
+variables:
+  trmnl:
+    user:
+      name: Preview User
+    plugin_settings:
+      instance_name: Mawaqit Prayer Times

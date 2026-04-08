@@ -86,13 +86,23 @@ Le serveur démarre sur le port 8080 par défaut. Visitez `http://localhost:8080
 
 ### Prévisualiser les templates
 
-Affichez les 4 variantes de mise en page dans votre navigateur sans lancer le serveur :
+Prévisualisez les 4 variantes de mise en page en local avec [trmnlp](https://github.com/usetrmnl/trmnlp) :
 
 ```bash
-go run . preview --slug=identifiant-de-votre-mosquee --timezone=Europe/Paris
+# Terminal 1 : générer les fichiers liquid depuis les templates Go (avec rebuild automatique)
+go run . liquidgen --watch
+
+# Terminal 2 : lancer le serveur de prévisualisation trmnlp
+trmnlp serve
 ```
 
-Cela génère un fichier `preview.html` utilisant le CSS du framework TRMNL et l'ouvre dans votre navigateur par défaut.
+Ou via Docker :
+```bash
+go run . liquidgen
+docker run --publish 4567:4567 --volume "$(pwd):/plugin" trmnl/trmnlp serve
+```
+
+Les templates Go dans `templates/` sont la source unique de vérité. La sous-commande `liquidgen` les rend avec des données fictives dans des fichiers `src/*.liquid` que trmnlp sert avec le Design System TRMNL.
 
 ### Structure du projet
 
@@ -102,8 +112,8 @@ trmnl-mawaqit/
 ├── handlers.go       # Handlers HTTP pour tous les endpoints TRMNL
 ├── mawaqit.go        # Client API Mawaqit avec cache TTL basé sur Isha
 ├── markup.go         # Calcul des horaires, rendu des templates, cache du rendu
+├── liquidgen.go      # Sous-commande CLI : génère src/*.liquid depuis les templates Go
 ├── i18n.go           # Traductions (EN/FR) et détection de la langue
-├── preview.go        # Commande CLI de prévisualisation des templates
 ├── store.go          # Stockage SQLite des utilisateurs (CRUD)
 ├── cmd/healthcheck/  # Petit binaire de vérification de santé pour Docker HEALTHCHECK
 ├── templates/
@@ -112,6 +122,8 @@ trmnl-mawaqit/
 │   ├── half_vertical.html     # Demi vertical (400x480)
 │   ├── quadrant.html          # Quadrant (400x240)
 │   └── manage.html            # Formulaire de paramètres (i18n)
+├── src/                       # Fichiers liquid générés pour trmnlp (gitignored)
+├── .trmnlp.yml                # Config trmnlp (surveillance fichiers, fuseau horaire)
 ├── Dockerfile                 # Build multi-étapes avec image distroless
 ├── docker-compose.yml
 └── .github/workflows/

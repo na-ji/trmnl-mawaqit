@@ -3,4 +3,4 @@ data
 *.http
 .claude/settings.local.json
 trmnl-mawaqit
-preview.html
+src/*.liquid

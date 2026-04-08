@@ -55,7 +55,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	if runPreview(os.Args) {
+	if runLiquidGen(os.Args) {
 		return
 	}
 
