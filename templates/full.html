@@ -1,7 +1,7 @@
 {{ define "full.html" }}
 <div class="layout layout--col gap">
 
-  <div class="grid grid--cols-2 lg:grid--cols-2 gap">
+  <div class="grid grid--cols-2 lg:portrait:grid--cols-1 gap">
     {{ range .Prayers }}
     <div class="item portrait:col--span-1{{ if .IsNext }} bg--black rounded{{ end }} p--2">
       <div class="meta"></div>
