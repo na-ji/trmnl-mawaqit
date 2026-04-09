@@ -1,12 +1,12 @@
 {{ define "full.html" }}
 <div class="layout layout--col gap">
 
-  <div class="grid grid--cols-2 lg:portrait:grid--cols-1 gap">
+  <div class="grid grid--cols-2 portrait:grid--cols-1 gap">
     {{ range .Prayers }}
-    <div class="item portrait:col--span-1{{ if .IsNext }} bg--black rounded{{ end }} p--2">
+    <div class="item {{ if .IsNext }} bg--black rounded{{ end }} p--2">
       <div class="meta"></div>
       <div class="content">
-        <span class="value value--xlarge lg:value--xxxlarge lg:portrait:value--xxlarge value--tnums{{ if .IsNext }} label--inverted{{ end }}">{{ .Time }}</span>
+        <span class="value value--xlarge lg:value--xxxlarge portrait:value--large lg:portrait:value--xxlarge value--tnums{{ if .IsNext }} label--inverted{{ end }}">{{ .Time }}</span>
         <span class="label label--medium lg:label--large{{ if .IsNext }} label--inverted{{ end }}">{{ .Name }}</span>
       </div>
     </div>

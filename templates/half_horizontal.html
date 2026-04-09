@@ -1,9 +1,9 @@
 {{ define "half_horizontal.html" }}
 <div class="layout layout--col gap">
 
-  <div class="grid grid--cols-3 lg:portrait:grid--cols-2 gap">
+  <div class="grid grid--cols-3 portrait:grid--cols-2 gap">
     {{ range .Prayers }}
-    <div class="item portrait:col--span-2{{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--2">
+    <div class="item {{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--2">
       <div class="meta"></div>
       <div class="content">
         <span class="value value--base lg:value--xxlarge lg:portrait:value--xlarge value--tnums">{{ .Time }}</span>

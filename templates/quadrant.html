@@ -1,7 +1,7 @@
 {{ define "quadrant.html" }}
 <div class="layout layout--col gap">
 
-  <div class="grid grid--cols-3 lg:grid--cols-2 gap">
+  <div class="grid grid--cols-3 lg:grid--cols-2 gap portrait:gap--none">
     {{ range .Prayers }}
     <div class="item portrait:col--span-2{{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--1">
       <div class="meta"></div>
@@ -17,6 +17,14 @@
 
 <div class="title_bar">
   <img class="image" src="https://usetrmnl.com/images/plugins/trmnl--render.svg">
+  <style>
+    .trmnl .screen--portrait .title_bar {
+      --title-bar-font-size: 10px;
+    }
+    .trmnl .screen--lg.screen--portrait .title_bar {
+      --title-bar-font-size: calc(16px * var(--ui-scale));
+    }
+  </style>
   <span class="title">{{ .MosqueName }}</span>
   <span class="instance">Jumua : {{ .Jumua }}{{ if .Jumua2 }} · {{ .Jumua2 }}{{ end }}{{ if .Jumua3 }} · {{ .Jumua3 }}{{ end }}</span>
 </div>
