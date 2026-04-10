@@ -1,9 +1,9 @@
 {{ define "quadrant.html" }}
 <div class="layout layout--col gap">
 
-  <div class="grid grid--cols-3 lg:grid--cols-2 gap portrait:gap--none">
+  <div class="grid grid--cols-3 lg:grid--cols-2 portrait:grid--cols-1 lg:portrait:grid--cols-1 gap portrait:gap--none">
     {{ range .Prayers }}
-    <div class="item portrait:col--span-2{{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--1">
+    <div class="item {{ if .IsNext }} bg--black rounded label--inverted{{ end }} p--1">
       <div class="meta"></div>
       <div class="content">
         <span class="value value--small lg:value--large lg:portrait:value--small value--tnums">{{ .Time }}</span>
