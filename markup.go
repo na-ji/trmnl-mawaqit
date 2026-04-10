@@ -104,7 +104,7 @@ func buildPrayerDisplay(data *MawaqitResponse, timezone string) (*PrayerDisplay,
 	return pd, nil
 }
 
-// MarkupCache caches rendered markup per user, expiring at the next prayer time.
+// MarkupCache caches rendered markup per mosque slug, expiring at the next prayer time.
 type MarkupCache struct {
 	mu      sync.RWMutex
 	entries map[string]markupCacheEntry
@@ -123,29 +123,22 @@ func NewMarkupCache() *MarkupCache {
 	}
 }
 
-// Get returns a cached MarkupResult for the given user UUID, or nil if expired/missing.
-func (mc *MarkupCache) Get(userUUID string) *MarkupResult {
+// Get returns a cached MarkupResult for the given mosque slug, or nil if expired/missing.
+func (mc *MarkupCache) Get(mosqueSlug string) *MarkupResult {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	entry, ok := mc.entries[userUUID]
+	entry, ok := mc.entries[mosqueSlug]
 	if !ok || mc.nowFunc().After(entry.expiresAt) {
 		return nil
 	}
 	return entry.result
 }
 
-// Set stores a MarkupResult for the given user UUID, expiring at expiresAt.
-func (mc *MarkupCache) Set(userUUID string, result *MarkupResult, expiresAt time.Time) {
+// Set stores a MarkupResult for the given mosque slug, expiring at expiresAt.
+func (mc *MarkupCache) Set(mosqueSlug string, result *MarkupResult, expiresAt time.Time) {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
-	mc.entries[userUUID] = markupCacheEntry{result: result, expiresAt: expiresAt}
-}
-
-// Delete removes a user's cached markup (e.g., on uninstall).
-func (mc *MarkupCache) Delete(userUUID string) {
-	mc.mu.Lock()
-	defer mc.mu.Unlock()
-	delete(mc.entries, userUUID)
+	mc.entries[mosqueSlug] = markupCacheEntry{result: result, expiresAt: expiresAt}
 }
 
 func timeToMinutes(t string) (int, error) {

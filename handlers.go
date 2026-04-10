@@ -255,8 +255,8 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 
 	markupRequestsTotal.Inc()
 
-	// Check markup cache first (per-user, expires at next prayer time)
-	if cached := h.markupCache.Get(userUUID); cached != nil {
+	// Check markup cache first (per-mosque, expires at next prayer time)
+	if cached := h.markupCache.Get(user.MosqueSlug); cached != nil {
 		markupCacheHitsTotal.Inc()
 		writeJSON(w, cached)
 		return
@@ -289,7 +289,7 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cache the rendered markup until the next prayer time
-	h.markupCache.Set(userUUID, result, pd.NextPrayerTime)
+	h.markupCache.Set(user.MosqueSlug, result, pd.NextPrayerTime)
 
 	writeJSON(w, result)
 }
@@ -323,7 +323,6 @@ func (h *Handlers) Uninstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	registeredUsers.Dec()
-	h.markupCache.Delete(payload.UserUUID)
 	log.Info().Str("uuid", payload.UserUUID).Msg("user uninstalled")
 	w.WriteHeader(http.StatusOK)
 }
