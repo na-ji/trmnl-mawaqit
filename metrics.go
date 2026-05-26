@@ -22,28 +22,28 @@ var (
 		Buckets: prometheus.DefBuckets,
 	}, []string{"method", "path"})
 
-	markupRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
+	markupRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "trmnl_markup_requests_total",
 		Help: "Total number of markup requests.",
-	})
+	}, []string{"mosque_slug"})
 
-	markupCacheHitsTotal = promauto.NewCounter(prometheus.CounterOpts{
+	markupCacheHitsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "trmnl_markup_cache_hits_total",
 		Help: "Total number of markup requests served from cache.",
-	})
+	}, []string{"mosque_slug"})
 
-	mawaqitAPICallsTotal = promauto.NewCounter(prometheus.CounterOpts{
+	mawaqitAPICallsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "trmnl_mawaqit_api_calls_total",
 		Help: "Total number of calls to the Mawaqit API.",
-	})
+	}, []string{"mosque_slug"})
 
-	mawaqitAPICacheHitsTotal = promauto.NewCounter(prometheus.CounterOpts{
+	mawaqitAPICacheHitsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "trmnl_mawaqit_api_cache_hits_total",
 		Help: "Total number of Mawaqit API calls served from cache.",
-	})
+	}, []string{"mosque_slug"})
 
-	mawaqitAPIErrorsTotal = promauto.NewCounter(prometheus.CounterOpts{
+	mawaqitAPIErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "trmnl_mawaqit_api_errors_total",
 		Help: "Total number of failed Mawaqit API calls.",
-	})
+	}, []string{"mosque_slug"})
 )

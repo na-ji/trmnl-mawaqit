@@ -253,11 +253,11 @@ func (h *Handlers) Markup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	markupRequestsTotal.Inc()
+	markupRequestsTotal.WithLabelValues(user.MosqueSlug).Inc()
 
 	// Check markup cache first (per-mosque, expires at next prayer time)
 	if cached := h.markupCache.Get(user.MosqueSlug); cached != nil {
-		markupCacheHitsTotal.Inc()
+		markupCacheHitsTotal.WithLabelValues(user.MosqueSlug).Inc()
 		writeJSON(w, cached)
 		return
 	}
