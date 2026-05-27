@@ -2,13 +2,16 @@
 
 # TRMNL Mawaqit - Plugin Horaires de Prière
 
+![preview](preview.png)
+
 Un plugin [TRMNL](https://usetrmnl.com) qui affiche les horaires de prière islamiques sur votre appareil e-ink, à partir des données de [Mawaqit](https://mawaqit.net).
 
-La seule configuration nécessaire est l'identifiant de votre mosquée (ex. `tawba-bussy-saint-georges`). Le plugin affiche les horaires de prière du jour avec la prochaine prière mise en évidence en gras.
+Recherchez votre mosquée par nom ou par ville depuis la page de paramètres, choisissez-la dans les suggestions, et le plugin affiche les horaires de prière du jour avec la prochaine prière mise en évidence en gras.
 
 ## Fonctionnalités
 
 - Horaires de prière en temps réel depuis les données Mawaqit
+- Recherche de mosquée avec autocomplétion débounced — plus besoin de chercher l'identifiant à la main
 - Prochaine prière automatiquement mise en évidence en gras
 - Horaires de Jumua (prière du vendredi) affichés en pied de page
 - 4 variantes de mise en page TRMNL : plein écran, demi horizontal, demi vertical, quadrant
@@ -19,8 +22,8 @@ La seule configuration nécessaire est l'identifiant de votre mosquée (ex. `taw
 ## Premiers pas
 
 1. [Installer le plugin sur votre TRMNL](https://trmnl.com/plugin_settings/new?keyname=mawaqit)
-2. Trouvez l'identifiant de votre mosquée sur [mawaqit.net](https://mawaqit.net) — c'est la dernière partie de l'URL : `mawaqit.net/fr/<identifiant-de-votre-mosquee>`
-3. Entrez l'identifiant dans la page de paramètres du plugin
+2. Ouvrez la page de paramètres du plugin et commencez à taper le nom de votre mosquée ou de votre ville dans le champ de recherche
+3. Sélectionnez votre mosquée dans les suggestions (le nom et l'adresse sont affichés pour chaque résultat) puis enregistrez
 
 ## Auto-hébergement
 

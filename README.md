@@ -2,13 +2,16 @@
 
 # TRMNL Mawaqit Prayer Times Plugin
 
+![preview](preview.png)
+
 A [TRMNL](https://usetrmnl.com) plugin that displays Islamic prayer times on your e-ink device, sourced from [Mawaqit](https://mawaqit.net) mosque data.
 
-The only configuration is your mosque slug (e.g. `tawba-bussy-saint-georges`), and the plugin renders prayer times for the current day with the next upcoming prayer highlighted in bold.
+Search for your mosque by name or city from the settings page, pick it from the suggestions, and the plugin renders prayer times for the current day with the next upcoming prayer highlighted in bold.
 
 ## Features
 
 - Real-time prayer times from Mawaqit's mosque calendar data
+- Mosque picker with debounced autocomplete search — no need to look up a slug by hand
 - Next prayer automatically highlighted in bold
 - Jumua (Friday prayer) times displayed in the footer
 - 4 TRMNL layout variants: full, half horizontal, half vertical, quadrant
@@ -19,8 +22,8 @@ The only configuration is your mosque slug (e.g. `tawba-bussy-saint-georges`), a
 ## Getting Started
 
 1. [Install the plugin on your TRMNL](https://trmnl.com/plugin_settings/new?keyname=mawaqit)
-2. Find your mosque slug on [mawaqit.net](https://mawaqit.net) — it's the last part of the URL: `mawaqit.net/en/<your-mosque-slug>`
-3. Enter the slug in the plugin settings page
+2. Open the plugin settings page and start typing your mosque name or city in the search field
+3. Pick your mosque from the suggestions (name and address are shown for each result) and save
 
 ## Self-Hosting
 
