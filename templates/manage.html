@@ -51,23 +51,94 @@
             font-weight: 600;
             margin-bottom: 6px;
         }
-        input[type="text"] {
+        input[type="text"], input[type="search"] {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
-            margin-bottom: 6px;
         }
-        input[type="text"]:focus {
+        input[type="search"]:focus {
             outline: none;
             border-color: #333;
         }
         .hint {
             font-size: 12px;
             color: #999;
-            margin-bottom: 20px;
+            margin-top: 6px;
+            margin-bottom: 16px;
         }
+        .search-wrapper {
+            position: relative;
+        }
+        .results {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            z-index: 10;
+            display: none;
+        }
+        .results.open { display: block; }
+        .results .item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .results .item:last-child { border-bottom: none; }
+        .results .item:hover,
+        .results .item.active {
+            background: #f5f5f5;
+        }
+        .results .item .name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        .results .item .loc {
+            font-size: 12px;
+            color: #777;
+        }
+        .results .status {
+            padding: 12px;
+            font-size: 13px;
+            color: #999;
+            text-align: center;
+        }
+        .results .status.error { color: #c62828; }
+        .selected {
+            margin: 0 0 16px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f5f5f5;
+            font-size: 14px;
+        }
+        .selected .lbl {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
+        .selected .name {
+            font-weight: 600;
+            color: #333;
+        }
+        .selected .loc {
+            color: #666;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        .selected.empty .name { color: #999; font-weight: 400; }
         button {
             width: 100%;
             padding: 12px;
@@ -79,7 +150,11 @@
             font-weight: 600;
             cursor: pointer;
         }
-        button:hover {
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
             background: #555;
         }
         .message {
@@ -120,15 +195,25 @@
         <h1>{{ .T.Heading }}</h1>
         <p class="subtitle">{{ .T.Subtitle }}</p>
 
-        <form method="POST" action="/manage">
+        <form method="POST" action="/manage" id="manage-form">
             <input type="hidden" name="uuid" value="{{ .UUID }}">
             <input type="hidden" name="lang" value="{{ .Lang }}">
+            <input type="hidden" id="mosque_slug" name="mosque_slug" value="{{ .MosqueSlug }}" required>
 
-            <label for="mosque_slug">{{ .T.FormLabel }}</label>
-            <input type="text" id="mosque_slug" name="mosque_slug" value="{{ .MosqueSlug }}" placeholder="{{ .T.Placeholder }}" required>
-            <p class="hint">{{ .T.HintPrefix }}<strong>{{ .T.HintEmphasis }}</strong></p>
+            <div class="selected {{ if not .MosqueSlug }}empty{{ end }}" id="selected">
+                <span class="lbl">{{ .T.CurrentLabel }}</span>
+                <div class="name" id="selected-name">{{ if .MosqueSlug }}{{ .MosqueSlug }}{{ else }}{{ .T.NoneSelected }}{{ end }}</div>
+                <div class="loc" id="selected-loc"></div>
+            </div>
 
-            <button type="submit">{{ .T.Button }}</button>
+            <label for="search">{{ .T.FormLabel }}</label>
+            <div class="search-wrapper">
+                <input type="search" id="search" placeholder="{{ .T.Placeholder }}" autocomplete="off" spellcheck="false">
+                <div class="results" id="results" role="listbox"></div>
+            </div>
+            <p class="hint">{{ .T.Hint }}</p>
+
+            <button type="submit" id="submit-btn" {{ if not .MosqueSlug }}disabled{{ end }}>{{ .T.Button }}</button>
         </form>
 
         {{ if .Message }}
@@ -138,6 +223,147 @@
         {{ end }}
         {{ end }}
     </div>
+
+    <script>
+    (function () {
+        const i18n = {
+            searching: {{ .T.Searching }},
+            noResults: {{ .T.NoResults }},
+            searchError: {{ .T.SearchError }},
+            tooShort: {{ .T.TooShort }},
+        };
+
+        const searchInput = document.getElementById('search');
+        const resultsEl = document.getElementById('results');
+        const slugInput = document.getElementById('mosque_slug');
+        const selectedEl = document.getElementById('selected');
+        const selectedName = document.getElementById('selected-name');
+        const selectedLoc = document.getElementById('selected-loc');
+        const submitBtn = document.getElementById('submit-btn');
+
+        const DEBOUNCE_MS = 300;
+        const MIN_LEN = 2;
+        let debounceTimer = null;
+        let inflight = null;
+        let activeIndex = -1;
+        let items = [];
+
+        function openResults() { resultsEl.classList.add('open'); }
+        function closeResults() {
+            resultsEl.classList.remove('open');
+            activeIndex = -1;
+        }
+
+        function renderStatus(text, isError) {
+            resultsEl.innerHTML = '';
+            const s = document.createElement('div');
+            s.className = 'status' + (isError ? ' error' : '');
+            s.textContent = text;
+            resultsEl.appendChild(s);
+            openResults();
+        }
+
+        function renderResults(list) {
+            items = list;
+            resultsEl.innerHTML = '';
+            if (list.length === 0) {
+                renderStatus(i18n.noResults, false);
+                return;
+            }
+            list.forEach((m, idx) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.setAttribute('role', 'option');
+                div.dataset.idx = String(idx);
+
+                const name = document.createElement('div');
+                name.className = 'name';
+                name.textContent = m.label || m.slug;
+
+                const loc = document.createElement('div');
+                loc.className = 'loc';
+                loc.textContent = m.localisation || '';
+
+                div.appendChild(name);
+                if (m.localisation) div.appendChild(loc);
+                div.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    select(idx);
+                });
+                resultsEl.appendChild(div);
+            });
+            openResults();
+        }
+
+        function select(idx) {
+            const m = items[idx];
+            if (!m) return;
+            slugInput.value = m.slug;
+            selectedName.textContent = m.label || m.slug;
+            selectedLoc.textContent = m.localisation || '';
+            selectedEl.classList.remove('empty');
+            submitBtn.disabled = false;
+            searchInput.value = '';
+            closeResults();
+        }
+
+        function highlight(delta) {
+            const nodes = resultsEl.querySelectorAll('.item');
+            if (nodes.length === 0) return;
+            activeIndex = (activeIndex + delta + nodes.length) % nodes.length;
+            nodes.forEach((n, i) => n.classList.toggle('active', i === activeIndex));
+            nodes[activeIndex].scrollIntoView({ block: 'nearest' });
+        }
+
+        async function runSearch(q) {
+            if (inflight) inflight.abort();
+            const ctrl = new AbortController();
+            inflight = ctrl;
+            renderStatus(i18n.searching, false);
+            try {
+                const resp = await fetch('/manage/search?q=' + encodeURIComponent(q), { signal: ctrl.signal });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
+                if (ctrl.signal.aborted) return;
+                renderResults(Array.isArray(data) ? data : []);
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                renderStatus(i18n.searchError, true);
+            } finally {
+                if (inflight === ctrl) inflight = null;
+            }
+        }
+
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.trim();
+            clearTimeout(debounceTimer);
+            if (inflight) inflight.abort();
+            if (q.length < MIN_LEN) {
+                renderStatus(i18n.tooShort, false);
+                return;
+            }
+            debounceTimer = setTimeout(() => runSearch(q), DEBOUNCE_MS);
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.trim().length >= MIN_LEN && items.length > 0) openResults();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsEl.contains(e.target) && e.target !== searchInput) closeResults();
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); highlight(1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(-1); }
+            else if (e.key === 'Enter') {
+                if (activeIndex >= 0) { e.preventDefault(); select(activeIndex); }
+            } else if (e.key === 'Escape') {
+                closeResults();
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
 {{ end }}

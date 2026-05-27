@@ -147,6 +147,25 @@ func (h *Handlers) Manage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ManageSearch GET /manage/search?q=...
+// Returns a JSON list of mosques matching the keyword. Used by the manage
+// page's autocomplete. The client is responsible for debouncing.
+func (h *Handlers) ManageSearch(w http.ResponseWriter, r *http.Request) {
+	keyword := strings.TrimSpace(r.URL.Query().Get("q"))
+	if len(keyword) < 2 {
+		writeJSON(w, []MosqueSearchResult{})
+		return
+	}
+
+	results, err := h.mawaqit.SearchMosques(keyword)
+	if err != nil {
+		log.Error().Err(err).Str("q", keyword).Msg("mosque search failed")
+		http.Error(w, "search failed", http.StatusBadGateway)
+		return
+	}
+	writeJSON(w, results)
+}
+
 // ManageSave POST /manage
 // Form submission from the manage page
 func (h *Handlers) ManageSave(w http.ResponseWriter, r *http.Request) {

@@ -5,11 +5,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
+
+// Official Mawaqit search endpoint. Independent from MAWAQIT_API_BASE which
+// points to the v1 mosque-detail API (which may be self-hosted).
+const mawaqitSearchURL = "https://mawaqit.net/api/2.0/mosque/search"
+
+type MosqueSearchResult struct {
+	Slug         string `json:"slug"`
+	Label        string `json:"label"`
+	Localisation string `json:"localisation"`
+}
 
 // Calendar is [12]map[string][]string — list of months, each month is a map
 // from day number (string like "1", "2", ...) to 6 prayer time strings.
@@ -119,4 +130,35 @@ func (c *MawaqitClient) GetMosqueData(slug string, timezone string) (*MawaqitRes
 	c.mu.Unlock()
 
 	return &data, nil
+}
+
+// SearchMosques queries the official Mawaqit search API and returns a list of
+// {slug, label, localisation}. The API returns additional fields which we discard.
+func (c *MawaqitClient) SearchMosques(keyword string) ([]MosqueSearchResult, error) {
+	q := url.Values{}
+	q.Set("word", keyword)
+	q.Set("fields", "slug,label,localisation")
+
+	req, err := http.NewRequest(http.MethodGet, mawaqitSearchURL+"?"+q.Encode(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("build search request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("search mosques: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("mawaqit search returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var results []MosqueSearchResult
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, fmt.Errorf("decode search response: %w", err)
+	}
+	return results, nil
 }

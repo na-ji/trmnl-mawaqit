@@ -96,6 +96,7 @@ func main() {
 	mux.HandleFunc("GET /install", h.Install)
 	mux.HandleFunc("POST /install/callback", h.InstallCallback)
 	mux.HandleFunc("GET /manage", h.Manage)
+	mux.HandleFunc("GET /manage/search", h.ManageSearch)
 	mux.HandleFunc("POST /manage", h.ManageSave)
 	mux.HandleFunc("POST /markup", h.Markup)
 	mux.HandleFunc("POST /uninstall", h.Uninstall)
